@@ -1,9 +1,14 @@
+import 'package:daily_drop/provider/paymentsProvider.dart';
 import 'package:daily_drop/screens/CustomersScreen.dart';
+import 'package:daily_drop/widgets/loading.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'ProductsScreen.dart';
 import 'OrdersScreen.dart';
 import 'PaymentsScreen.dart';
 import 'package:intl/intl.dart';
+import '../model/customer_model.dart';
+import '../provider/customerProvider.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key, this.initialIndex = 0});
@@ -17,13 +22,11 @@ class Dashboard extends StatefulWidget {
 class _DashboardState extends State<Dashboard> {
   int _currentIndex = 0;
 
-  // Bottom Navigation handled in build via 'pages' list
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
   }
-  final today = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
 
   @override
   Widget build(BuildContext context) {
@@ -55,80 +58,127 @@ class _DashboardState extends State<Dashboard> {
   }
 }
 
-class DashboardHome extends StatelessWidget {
+class DashboardHome extends ConsumerWidget {
   final ValueChanged<int> onNavigate;
   const DashboardHome({super.key, required this.onNavigate});
 
-Widget build(BuildContext context) {
-  return Scaffold(
-    body: SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Gradient Header Section (no top space)
-         Container(
-  padding: const EdgeInsets.only(
-    top: 0,
-    left: 20,
-    right: 20,
-    bottom: 20,
-  ),
-  decoration: const BoxDecoration(
-    gradient: LinearGradient(
-      colors: [Color(0xFF6A5BFF), Color(0xFF4C8CFF)],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    ),
-    borderRadius: BorderRadius.only(
-      bottomLeft: Radius.circular(30),
-      bottomRight: Radius.circular(30),
-    ),
-  ),
-  child: SafeArea(
-    bottom: false,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Dashboard",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()), // 👈 Today’s date
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 15),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  bool _isDueToday(CustomerProduct p, DateTime today) {
+    switch (p.frequency) {
+      case DeliveryFrequency.everyday:
+        return true;
+      case DeliveryFrequency.oneDayOnOneDayOff:
+        return p.alternateDayStart == AlternateDayStart.today;
+      case DeliveryFrequency.weekly:
+        if (p.weeklyDay == null) return false;
+        final weekdayMap = {
+          WeekDay.monday: DateTime.monday,
+          WeekDay.tuesday: DateTime.tuesday,
+          WeekDay.wednesday: DateTime.wednesday,
+          WeekDay.thursday: DateTime.thursday,
+          WeekDay.friday: DateTime.friday,
+          WeekDay.saturday: DateTime.saturday,
+          WeekDay.sunday: DateTime.sunday,
+        };
+        return weekdayMap[p.weeklyDay] == today.weekday;
+      case DeliveryFrequency.monthly:
+        return false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final today = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
+    final customersAsync = ref.watch(customersProvider);
+    final deliveriesAsync = ref.watch(deliveriesProvider);
+    final totalPendingAsync = ref.watch(totalPendingProvider);
+
+    final now = DateTime.now();
+    final completedTodayIds = deliveriesAsync.maybeWhen(
+      data: (list) => list
+          .where((d) => d.date.year == now.year && d.date.month == now.month && d.date.day == now.day)
+          .map((d) => d.customerId)
+          .toSet(),
+      orElse: () => <String>{},
+    );
+
+    int dueCount = customersAsync.maybeWhen(
+      data: (customers) {
+        int count = 0;
+        for (final c in customers) {
+          final hasDue = c.products.any((p) => _isDueToday(p, now));
+          if (hasDue) count++;
+        }
+        return count;
+      },
+      orElse: () => 0,
+    );
+
+    final completedCount = completedTodayIds.length;
+    final totalPending = totalPendingAsync.maybeWhen(data: (v) => v, orElse: () => 0.0);
+
+    return Scaffold(
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _statCard("Today's Deliveries", "1/1"),
-            _statCard("Pending Amount", "₹910"),
-          ],
-        ),
-      ],
-    ),
-  ),
-),
-
+            Container(
+              padding: const EdgeInsets.only(
+                top: 0,
+                left: 20,
+                right: 20,
+                bottom: 20,
+              ),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF6A5BFF), Color(0xFF4C8CFF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Dashboard",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      today,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _statCard("Today's Deliveries", "$completedCount/$dueCount"),
+                        _statCard("Pending Amount", "₹${totalPending.toStringAsFixed(0)}"),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
-
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Text("Quick Actions",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
-
             const SizedBox(height: 10),
-
-            // Quick Action Buttons
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: GridView.count(
@@ -154,8 +204,8 @@ Widget build(BuildContext context) {
                     icon: Icons.people,
                     color: Colors.blue.shade100,
                     onTap: () {
-                      Navigator.push(context, 
-                      MaterialPageRoute(builder: (context) => CustomersScreen(),),);
+                      Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => CustomersScreen(),),);
                     },
                   ),
                   _actionCard(
@@ -178,7 +228,60 @@ Widget build(BuildContext context) {
                   ),
                 ],
               ),
-            )
+            ),
+            const SizedBox(height: 20),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text('Recent Deliveries', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 10),
+            Consumer(
+              builder: (context, ref, _) {
+                final recentAsync = ref.watch(recentDeliveriesProvider);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: recentAsync.when(
+                    data: (list) {
+                      if (list.isEmpty) {
+                        return Text('No deliveries yet', style: TextStyle(color: Colors.grey.shade600));
+                      }
+                      return Column(
+                        children: list.map((d) {
+                          final primary = d.customerName;
+                          final productsSummary = d.items.map((i) => '${i.quantity}x ${i.productName}').join(', ');
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FFF4),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFE6F4EA)),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(primary, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 4),
+                                      Text(productsSummary, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.check_circle, color: Color(0xFF10B981)),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                    loading: () => const Center(child: const LoadingOverlay()),
+                    error: (e, _) => Text('Error: $e'),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -186,7 +289,6 @@ Widget build(BuildContext context) {
   }
 }
 
-// Stats Card
 Widget _statCard(String title, String value) {
   return Container(
     width: 150,
@@ -211,7 +313,6 @@ Widget _statCard(String title, String value) {
   );
 }
 
-// Action Card
 Widget _actionCard(
   BuildContext context, {
   required String title,

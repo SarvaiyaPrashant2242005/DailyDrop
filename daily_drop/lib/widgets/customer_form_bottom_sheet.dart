@@ -2,6 +2,7 @@
 
 import 'package:daily_drop/controller/customer_controller.dart';
 import 'package:daily_drop/model/Product_model.dart';
+import 'package:daily_drop/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../model/customer_model.dart';
@@ -456,7 +457,7 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                           }).toList(),
                         );
                       },
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () => const Center(child: const LoadingOverlay()),
                       error: (_, __) => const Text('Error loading products'),
                     ),
 

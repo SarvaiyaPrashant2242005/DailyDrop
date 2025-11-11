@@ -2,6 +2,7 @@
 
 import 'package:daily_drop/controller/Product_Controller.dart';
 import 'package:daily_drop/widgets/ProductCard.dart';
+import 'package:daily_drop/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../provider/productProvider.dart';
@@ -172,7 +173,7 @@ class ProductsScreen extends ConsumerWidget {
                 );
               },
               loading: () => const Center(
-                child: CircularProgressIndicator(),
+                child: const LoadingOverlay(),
               ),
               error: (error, stack) => Center(
                 child: Column(

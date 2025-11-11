@@ -1,5 +1,6 @@
 // lib/screens/CustomersScreen.dart
 
+import 'package:daily_drop/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../provider/customerProvider.dart';
@@ -142,7 +143,7 @@ class CustomersScreen extends ConsumerWidget {
                 );
               },
               loading: () => const Center(
-                child: CircularProgressIndicator(),
+                child: const LoadingOverlay(),
               ),
               error: (error, stack) => Center(
                 child: Column(
