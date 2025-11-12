@@ -46,57 +46,37 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
     super.dispose();
   }
 
-  void _addProduct(Product product, int quantity, DeliveryFrequency frequency, 
-      {AlternateDayStart? alternateDayStart, WeekDay? weeklyDay}) {
-    setState(() {
-      final existingIndex = _selectedProducts.indexWhere((p) => p.productId == product.id);
-      if (existingIndex != -1) {
-        final existing = _selectedProducts[existingIndex];
-        _selectedProducts[existingIndex] = existing.copyWith(
-          quantity: quantity,
-          frequency: frequency,
-          alternateDayStart: alternateDayStart,
-          weeklyDay: weeklyDay,
-        );
-      } else {
-        _selectedProducts.add(CustomerProduct(
-          productId: product.id,
-          productName: product.name,
-          quantity: quantity,
-          price: product.defaultPrice,
-          unit: product.unit,
-          frequency: frequency,
-          alternateDayStart: alternateDayStart,
-          weeklyDay: weeklyDay,
-        ));
-      }
-    });
+  void _showProductSelectionDialog(List<Product> allProducts) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ProductSearchBottomSheet(
+        products: allProducts,
+        onProductSelected: (product) {
+          _showProductConfigDialog(product);
+        },
+      ),
+    );
   }
 
-  void _removeProduct(int index) {
-    setState(() {
-      _selectedProducts.removeAt(index);
-    });
-  }
-
-  void _editSelectedProduct(int index) {
-    final existing = _selectedProducts[index];
-    int q = existing.quantity;
-    DeliveryFrequency freq = existing.frequency;
-    AlternateDayStart? altStart = existing.alternateDayStart;
-    WeekDay? weekDay = existing.weeklyDay;
+  void _showProductConfigDialog(Product product) {
+    int quantity = 1;
+    DeliveryFrequency frequency = DeliveryFrequency.everyday;
+    AlternateDayStart alternateDayStart = AlternateDayStart.today;
+    WeekDay weeklyDay = WeekDay.monday;
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: false,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
         return Container(
           margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
           ),
           child: StatefulBuilder(
             builder: (context, setSheetState) {
@@ -106,46 +86,131 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(existing.productName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4C8CFF).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.shopping_bag_outlined,
+                            color: Color(0xFF4C8CFF),
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                product.name,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '₹${product.defaultPrice.toStringAsFixed(0)} per ${product.unit}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         IconButton(
                           onPressed: () => Navigator.pop(context),
                           icon: const Icon(Icons.close),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 24),
+                    
                     // Quantity selector
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Quantity:', style: TextStyle(fontWeight: FontWeight.w500)),
-                        Row(
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                if (q > 1) setSheetState(() => q--);
-                              },
-                              icon: const Icon(Icons.remove_circle_outline),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Quantity',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
                             ),
-                            Text('$q', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            IconButton(
-                              onPressed: () => setSheetState(() => q++),
-                              icon: const Icon(Icons.add_circle_outline),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: () {
+                                  if (quantity > 1) setSheetState(() => quantity--);
+                                },
+                                icon: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: const Icon(Icons.remove, size: 20),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF4C8CFF).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '$quantity',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF4C8CFF),
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () => setSheetState(() => quantity++),
+                                icon: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF4C8CFF),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.add, size: 20, color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 12),
-                    const Text('Delivery Frequency:', style: TextStyle(fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 16),
+                    
+                    // Frequency dropdown
+                    const Text(
+                      'Delivery Frequency',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                    ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<DeliveryFrequency>(
-                      value: freq,
+                      value: frequency,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                       ),
                       items: DeliveryFrequency.values.map((f) => DropdownMenuItem(
                         value: f,
@@ -154,85 +219,127 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                       onChanged: (val) {
                         if (val != null) {
                           setSheetState(() {
-                            freq = val;
-                            // Reset schedule options when frequency changes
-                            if (freq == DeliveryFrequency.oneDayOnOneDayOff) {
-                              altStart = altStart ?? AlternateDayStart.today;
-                              weekDay = null;
-                            } else if (freq == DeliveryFrequency.weekly) {
-                              weekDay = weekDay ?? WeekDay.monday;
-                              altStart = null;
-                            } else {
-                              altStart = null;
-                              weekDay = null;
-                            }
+                            frequency = val;
                           });
                         }
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     
-                    // Show alternate day start option
-                    if (freq == DeliveryFrequency.oneDayOnOneDayOff) ...[
-                      const Text('Start From:', style: TextStyle(fontWeight: FontWeight.w500)),
+                    // Alternate day start option
+                    if (frequency == DeliveryFrequency.oneDayOnOneDayOff) ...[
+                      const Text(
+                        'Start From',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<AlternateDayStart>(
-                        value: altStart ?? AlternateDayStart.today,
+                        value: alternateDayStart,
                         decoration: InputDecoration(
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         ),
                         items: AlternateDayStart.values.map((start) => DropdownMenuItem(
                           value: start,
                           child: Text(start.label),
                         )).toList(),
                         onChanged: (val) {
-                          if (val != null) setSheetState(() => altStart = val);
+                          if (val != null) setSheetState(() => alternateDayStart = val);
                         },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                     ],
                     
-                    // Show weekly day option
-                    if (freq == DeliveryFrequency.weekly) ...[
-                      const Text('Delivery Day:', style: TextStyle(fontWeight: FontWeight.w500)),
+                    // Weekly day option
+                    if (frequency == DeliveryFrequency.weekly) ...[
+                      const Text(
+                        'Delivery Day',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<WeekDay>(
-                        value: weekDay ?? WeekDay.monday,
+                        value: weeklyDay,
                         decoration: InputDecoration(
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         ),
                         items: WeekDay.values.map((day) => DropdownMenuItem(
                           value: day,
                           child: Text(day.label),
                         )).toList(),
                         onChanged: (val) {
-                          if (val != null) setSheetState(() => weekDay = val);
+                          if (val != null) setSheetState(() => weeklyDay = val);
                         },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                     ],
                     
+                    const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
+                      height: 50,
                       child: ElevatedButton(
                         onPressed: () {
                           setState(() {
-                            _selectedProducts[index] = existing.copyWith(
-                              quantity: q,
-                              frequency: freq,
-                              alternateDayStart: altStart,
-                              weeklyDay: weekDay,
+                            final existingIndex = _selectedProducts.indexWhere(
+                              (p) => p.productId == product.id
                             );
+                            
+                            if (existingIndex != -1) {
+                              _selectedProducts[existingIndex] = _selectedProducts[existingIndex].copyWith(
+                                quantity: quantity,
+                                frequency: frequency,
+                                alternateDayStart: frequency == DeliveryFrequency.oneDayOnOneDayOff 
+                                    ? alternateDayStart 
+                                    : null,
+                                weeklyDay: frequency == DeliveryFrequency.weekly 
+                                    ? weeklyDay 
+                                    : null,
+                              );
+                            } else {
+                              _selectedProducts.add(CustomerProduct(
+                                productId: product.id,
+                                productName: product.name,
+                                quantity: quantity,
+                                price: product.defaultPrice,
+                                unit: product.unit,
+                                frequency: frequency,
+                                alternateDayStart: frequency == DeliveryFrequency.oneDayOnOneDayOff 
+                                    ? alternateDayStart 
+                                    : null,
+                                weeklyDay: frequency == DeliveryFrequency.weekly 
+                                    ? weeklyDay 
+                                    : null,
+                              ));
+                            }
                           });
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4C8CFF),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
                         ),
-                        child: const Text('Save', style: TextStyle(color: Colors.white)),
+                        child: const Text(
+                          'Add Product',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -243,6 +350,282 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
         );
       },
     );
+  }
+
+  void _removeProduct(int index) {
+    setState(() {
+      _selectedProducts.removeAt(index);
+    });
+  }
+
+  void _editSelectedProduct(int index) {
+    final productsAsync = ref.read(productsProvider);
+    productsAsync.whenData((products) {
+      final existing = _selectedProducts[index];
+      final product = products.firstWhere((p) => p.id == existing.productId);
+      
+      int quantity = existing.quantity;
+      DeliveryFrequency frequency = existing.frequency;
+      AlternateDayStart alternateDayStart = existing.alternateDayStart ?? AlternateDayStart.today;
+      WeekDay weeklyDay = existing.weeklyDay ?? WeekDay.monday;
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) {
+          return Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: StatefulBuilder(
+              builder: (context, setSheetState) {
+                return SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4C8CFF).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.edit_outlined,
+                              color: Color(0xFF4C8CFF),
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  existing.productName,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  '₹${product.defaultPrice.toStringAsFixed(0)} per ${product.unit}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // Quantity selector (same as add product)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Quantity',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                IconButton(
+                                  onPressed: () {
+                                    if (quantity > 1) setSheetState(() => quantity--);
+                                  },
+                                  icon: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.grey.shade300),
+                                    ),
+                                    child: const Icon(Icons.remove, size: 20),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF4C8CFF).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '$quantity',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF4C8CFF),
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () => setSheetState(() => quantity++),
+                                  icon: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF4C8CFF),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Icons.add, size: 20, color: Colors.white),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      const Text(
+                        'Delivery Frequency',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<DeliveryFrequency>(
+                        value: frequency,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        ),
+                        items: DeliveryFrequency.values.map((f) => DropdownMenuItem(
+                          value: f,
+                          child: Text(f.label),
+                        )).toList(),
+                        onChanged: (val) {
+                          if (val != null) setSheetState(() => frequency = val);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      if (frequency == DeliveryFrequency.oneDayOnOneDayOff) ...[
+                        const Text(
+                          'Start From',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<AlternateDayStart>(
+                          value: alternateDayStart,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          ),
+                          items: AlternateDayStart.values.map((start) => DropdownMenuItem(
+                            value: start,
+                            child: Text(start.label),
+                          )).toList(),
+                          onChanged: (val) {
+                            if (val != null) setSheetState(() => alternateDayStart = val);
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      
+                      if (frequency == DeliveryFrequency.weekly) ...[
+                        const Text(
+                          'Delivery Day',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<WeekDay>(
+                          value: weeklyDay,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          ),
+                          items: WeekDay.values.map((day) => DropdownMenuItem(
+                            value: day,
+                            child: Text(day.label),
+                          )).toList(),
+                          onChanged: (val) {
+                            if (val != null) setSheetState(() => weeklyDay = val);
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectedProducts[index] = existing.copyWith(
+                                quantity: quantity,
+                                frequency: frequency,
+                                alternateDayStart: frequency == DeliveryFrequency.oneDayOnOneDayOff 
+                                    ? alternateDayStart 
+                                    : null,
+                                weeklyDay: frequency == DeliveryFrequency.weekly 
+                                    ? weeklyDay 
+                                    : null,
+                              );
+                            });
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4C8CFF),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Update Product',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      );
+    });
   }
 
   void _handleSubmit() {
@@ -384,82 +767,170 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                     const SizedBox(height: 20),
 
                     // Products Section
-                    const Text('Products *', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Products *',
+                          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+                        ),
+                        productsAsync.when(
+                          data: (products) {
+                            if (products.isEmpty) return const SizedBox.shrink();
+                            return TextButton.icon(
+                              onPressed: () => _showProductSelectionDialog(products),
+                              icon: const Icon(Icons.add_circle_outline),
+                              label: const Text('Add Product'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFF4C8CFF),
+                              ),
+                            );
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
 
                     // Selected Products List
-                    if (_selectedProducts.isNotEmpty)
+                    if (_selectedProducts.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200, style: BorderStyle.solid),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.shopping_bag_outlined, size: 48, color: Colors.grey.shade400),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No products added yet',
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                            ),
+                            const SizedBox(height: 8),
+                            productsAsync.when(
+                              data: (products) {
+                                if (products.isEmpty) {
+                                  return Text(
+                                    'Add products first to continue',
+                                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                                  );
+                                }
+                                return TextButton(
+                                  onPressed: () => _showProductSelectionDialog(products),
+                                  child: const Text('Browse Products'),
+                                );
+                              },
+                              loading: () => const SizedBox.shrink(),
+                              error: (_, __) => const SizedBox.shrink(),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
                       ...List.generate(_selectedProducts.length, (index) {
                         final product = _selectedProducts[index];
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade50,
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.green.shade50,
+                                Colors.green.shade50.withOpacity(0.5),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.green.shade200),
                           ),
                           child: Row(
                             children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green.shade600,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       '${product.quantity}x ${product.productName}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
-                                    Text(
-                                      _getProductScheduleInfo(product),
-                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_today,
+                                          size: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            _getProductScheduleInfo(product),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               ),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    onPressed: () => _editSelectedProduct(index),
-                                    icon: const Icon(Icons.edit, color: Color(0xFF4C8CFF)),
+                              IconButton(
+                                onPressed: () => _editSelectedProduct(index),
+                                icon: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  IconButton(
-                                    onPressed: () => _removeProduct(index),
-                                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                  child: const Icon(
+                                    Icons.edit_outlined,
+                                    color: Color(0xFF4C8CFF),
+                                    size: 18,
                                   ),
-                                ],
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () => _removeProduct(index),
+                                icon: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                    size: 18,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         );
                       }),
-
-                    const SizedBox(height: 12),
-
-                    // Available Products
-                    productsAsync.when(
-                      data: (products) {
-                        if (products.isEmpty) {
-                          return Text(
-                            isEditMode 
-                                ? 'No products available.' 
-                                : 'No products available. Add products first.'
-                          );
-                        }
-
-                        return Column(
-                          children: products.map((product) {
-                            return _ProductSelectionTile(
-                              product: product,
-                              onAdd: (quantity, frequency, alternateDayStart, weeklyDay) => 
-                                  _addProduct(product, quantity, frequency, 
-                                      alternateDayStart: alternateDayStart, weeklyDay: weeklyDay),
-                            );
-                          }).toList(),
-                        );
-                      },
-                      loading: () => const Center(child: const LoadingOverlay()),
-                      error: (_, __) => const Text('Error loading products'),
-                    ),
 
                     const SizedBox(height: 80),
                   ],
@@ -503,174 +974,243 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
   }
 }
 
-// Product Selection Tile Widget
-class _ProductSelectionTile extends StatefulWidget {
-  final Product product;
-  final Function(int quantity, DeliveryFrequency frequency, AlternateDayStart? alternateDayStart, WeekDay? weeklyDay) onAdd;
+// Product Search Bottom Sheet Widget
+class _ProductSearchBottomSheet extends StatefulWidget {
+  final List<Product> products;
+  final Function(Product) onProductSelected;
 
-  const _ProductSelectionTile({
-    required this.product,
-    required this.onAdd,
+  const _ProductSearchBottomSheet({
+    required this.products,
+    required this.onProductSelected,
   });
 
   @override
-  State<_ProductSelectionTile> createState() => _ProductSelectionTileState();
+  State<_ProductSearchBottomSheet> createState() => _ProductSearchBottomSheetState();
 }
 
-class _ProductSelectionTileState extends State<_ProductSelectionTile> {
-  int _quantity = 1;
-  DeliveryFrequency _frequency = DeliveryFrequency.everyday;
-  AlternateDayStart _alternateDayStart = AlternateDayStart.today;
-  WeekDay _weeklyDay = WeekDay.monday;
-  bool _isExpanded = false;
+class _ProductSearchBottomSheetState extends State<_ProductSearchBottomSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  List<Product> _filteredProducts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredProducts = widget.products;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterProducts(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredProducts = widget.products;
+      } else {
+        _filteredProducts = widget.products
+            .where((product) =>
+                product.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      height: MediaQuery.of(context).size.height * 0.75,
+      margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         children: [
-          ListTile(
-            title: Text(widget.product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('₹${widget.product.defaultPrice.toStringAsFixed(0)} each'),
-            trailing: _isExpanded
-                ? const Icon(Icons.expand_less)
-                : const Icon(Icons.expand_more),
-            onTap: () => setState(() => _isExpanded = !_isExpanded),
-          ),
-          if (_isExpanded) ...[
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Quantity Selector
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Quantity:', style: TextStyle(fontWeight: FontWeight.w500)),
-                      Row(
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              if (_quantity > 1) setState(() => _quantity--);
-                            },
-                            icon: const Icon(Icons.remove_circle_outline),
-                          ),
-                          Text('$_quantity', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          IconButton(
-                            onPressed: () => setState(() => _quantity++),
-                            icon: const Icon(Icons.add_circle_outline),
-                          ),
-                        ],
+                      const Text(
+                        'Select Product',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '${widget.products.length} products available',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  
-                  // Frequency Dropdown
-                  const Text('Delivery Frequency:', style: TextStyle(fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<DeliveryFrequency>(
-                    value: _frequency,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    items: DeliveryFrequency.values.map((freq) {
-                      return DropdownMenuItem(
-                        value: freq,
-                        child: Text(freq.label),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) setState(() => _frequency = value);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  // Show alternate day start option
-                  if (_frequency == DeliveryFrequency.oneDayOnOneDayOff) ...[
-                    const Text('Start From:', style: TextStyle(fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<AlternateDayStart>(
-                      value: _alternateDayStart,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      items: AlternateDayStart.values.map((start) {
-                        return DropdownMenuItem(
-                          value: start,
-                          child: Text(start.label),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) setState(() => _alternateDayStart = value);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  
-                  // Show weekly day option
-                  if (_frequency == DeliveryFrequency.weekly) ...[
-                    const Text('Delivery Day:', style: TextStyle(fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<WeekDay>(
-                      value: _weeklyDay,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      items: WeekDay.values.map((day) {
-                        return DropdownMenuItem(
-                          value: day,
-                          child: Text(day.label),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) setState(() => _weeklyDay = value);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  
-                  // Add Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        widget.onAdd(
-                          _quantity,
-                          _frequency,
-                          _frequency == DeliveryFrequency.oneDayOnOneDayOff ? _alternateDayStart : null,
-                          _frequency == DeliveryFrequency.weekly ? _weeklyDay : null,
-                        );
-                        setState(() {
-                          _isExpanded = false;
-                          _quantity = 1;
-                          _frequency = DeliveryFrequency.everyday;
-                          _alternateDayStart = AlternateDayStart.today;
-                          _weeklyDay = WeekDay.monday;
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4C8CFF),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: const Text('Add', style: TextStyle(color: Colors.white)),
-                    ),
-                  ),
-                ],
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _filterProducts,
+              decoration: InputDecoration(
+                hintText: 'Search products...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _filterProducts('');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
-          ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Products List
+          Expanded(
+            child: _filteredProducts.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 64,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No products found',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Try a different search term',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: _filteredProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = _filteredProducts[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.shade100,
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.pop(context);
+                            widget.onProductSelected(product);
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF4C8CFF).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.shopping_bag_outlined,
+                                    color: Color(0xFF4C8CFF),
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        product.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '₹${product.defaultPrice.toStringAsFixed(0)} per ${product.unit}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF4C8CFF),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.arrow_forward,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
         ],
       ),
     );
