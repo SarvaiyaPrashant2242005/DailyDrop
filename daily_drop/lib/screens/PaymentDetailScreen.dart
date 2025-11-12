@@ -3,6 +3,7 @@ import 'package:daily_drop/model/customer_model.dart';
 import 'package:daily_drop/model/delivery_model.dart';
 import 'package:daily_drop/provider/paymentsProvider.dart';
 import 'package:daily_drop/widgets/loading.dart';
+import 'package:daily_drop/widgets/receive_payment_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -21,16 +22,22 @@ class PaymentDetailScreen extends ConsumerWidget {
       backgroundColor: Colors.grey[50],
       body: Column(
         children: [
-          // Header Section with Customer Info
+          // ✅ Updated header section with your provided container
           Container(
-            padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 30),
-            decoration: BoxDecoration(
+            width: double.infinity,
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 24,
+              left: 20,
+              right: 20,
+              bottom: 30,
+            ),
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFFFF6B35), Color(0xFFFF4500)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: const BorderRadius.only(
+              borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(30),
                 bottomRight: Radius.circular(30),
               ),
@@ -84,6 +91,7 @@ class PaymentDetailScreen extends ConsumerWidget {
             ),
           ),
 
+          // ✅ Main content section
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(20),
@@ -138,7 +146,7 @@ class PaymentDetailScreen extends ConsumerWidget {
                 Text(
                   'Deliveries',
                   style: TextStyle(
-                    color: Color(0xFF1A3A52),
+                    color: const Color(0xFF1A3A52),
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -169,27 +177,29 @@ class PaymentDetailScreen extends ConsumerWidget {
 
                     return Column(
                       children: sortedKeys.expand((key) {
-                        final dateLabel = DateFormat('EEE, d MMM').format(DateTime.parse(key));
+                        final dateLabel =
+                            DateFormat('EEE, d MMM').format(DateTime.parse(key));
                         final group = byDate[key]!;
-                        
+
                         return [
                           // Date Header
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 12, top: 8),
+                            padding:
+                                const EdgeInsets.only(bottom: 12, top: 8),
                             child: Row(
                               children: [
                                 Container(
                                   width: 4,
                                   height: 20,
                                   decoration: BoxDecoration(
-                                    color: Color(0xFFFF6B35),
+                                    color: const Color(0xFFFF6B35),
                                     borderRadius: BorderRadius.circular(2),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
                                   dateLabel,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Color(0xFF1A3A52),
                                     fontWeight: FontWeight.w600,
                                     fontSize: 16,
@@ -200,7 +210,8 @@ class PaymentDetailScreen extends ConsumerWidget {
                           ),
 
                           // Delivery Items
-                          ...group.expand((delv) => delv.items.map((it) => Container(
+                          ...group.expand((delv) => delv.items.map((it) =>
+                              Container(
                                 margin: const EdgeInsets.only(bottom: 12),
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
@@ -215,12 +226,13 @@ class PaymentDetailScreen extends ConsumerWidget {
                                   ],
                                 ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
                                       child: Text(
                                         '${it.quantity}x ${it.productName}',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Color(0xFF1A3A52),
                                           fontSize: 15,
                                           fontWeight: FontWeight.w500,
@@ -241,20 +253,23 @@ class PaymentDetailScreen extends ConsumerWidget {
 
                           // Day's Total
                           Container(
-                            margin: const EdgeInsets.only(bottom: 20, top: 4),
+                            margin:
+                                const EdgeInsets.only(bottom: 20, top: 4),
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Color(0xFF10B981).withOpacity(0.1),
+                              color: const Color(0xFF10B981).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: Color(0xFF10B981).withOpacity(0.3),
+                                color: const Color(0xFF10B981)
+                                    .withOpacity(0.3),
                                 width: 1,
                               ),
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
+                                const Text(
                                   "Day's Total",
                                   style: TextStyle(
                                     color: Color(0xFF1A3A52),
@@ -263,7 +278,9 @@ class PaymentDetailScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 Text(
-                                  '₹${group.fold<double>(0, (s, d) => s + d.total).toStringAsFixed(0)}',
+                                  '₹${group.fold<double>(
+                                          0, (s, d) => s + d.total)
+                                      .toStringAsFixed(0)}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF10B981),
@@ -277,7 +294,7 @@ class PaymentDetailScreen extends ConsumerWidget {
                       }).toList(),
                     );
                   },
-                  loading: () => const Center(child: const LoadingOverlay()),
+                  loading: () => const Center(child: LoadingOverlay()),
                   error: (e, _) => Text('Error: $e'),
                 ),
 
@@ -288,18 +305,19 @@ class PaymentDetailScreen extends ConsumerWidget {
                   data: (map) {
                     final pending = (map[customer.id] ?? 0);
                     if (pending <= 0) return const SizedBox.shrink();
-                    
+
                     return Container(
                       width: double.infinity,
                       height: 56,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
+                        gradient: const LinearGradient(
                           colors: [Color(0xFF10B981), Color(0xFF059669)],
                         ),
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xFF10B981).withOpacity(0.3),
+                            color:
+                                const Color(0xFF10B981).withOpacity(0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 6),
                           ),
@@ -311,7 +329,7 @@ class PaymentDetailScreen extends ConsumerWidget {
                             context: context,
                             isScrollControlled: true,
                             backgroundColor: Colors.transparent,
-                            builder: (_) => _ReceivePaymentBottomSheet(
+                            builder: (_) => ReceivePaymentBottomSheet(
                               pendingAmount: pending,
                               onConfirm: (amount) {
                                 final controller = PaymentsController(ref);
@@ -349,131 +367,6 @@ class PaymentDetailScreen extends ConsumerWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ReceivePaymentBottomSheet extends StatefulWidget {
-  final double pendingAmount;
-  final Function(double) onConfirm;
-
-  const _ReceivePaymentBottomSheet({
-    required this.pendingAmount,
-    required this.onConfirm,
-  });
-
-  @override
-  State<_ReceivePaymentBottomSheet> createState() => _ReceivePaymentBottomSheetState();
-}
-
-class _ReceivePaymentBottomSheetState extends State<_ReceivePaymentBottomSheet> {
-  late TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.pendingAmount.toStringAsFixed(0));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Receive Payment',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A3A52),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Pending: ₹${widget.pendingAmount.toStringAsFixed(0)}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _controller,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Amount',
-                prefixText: '₹',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF10B981), width: 2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () {
-                  final amount = double.tryParse(_controller.text) ?? 0;
-                  if (amount > 0) {
-                    Navigator.pop(context);
-                    widget.onConfirm(amount);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Confirm Payment',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

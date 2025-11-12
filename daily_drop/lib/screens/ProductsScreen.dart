@@ -22,7 +22,7 @@ class ProductsScreen extends ConsumerWidget {
           // Header Section with Gradient
           Container(
             padding: const EdgeInsets.only(
-              top: 50,
+              top: 60,
               left: 20,
               right: 20,
               bottom: 20,

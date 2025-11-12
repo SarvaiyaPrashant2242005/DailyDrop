@@ -85,7 +85,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       body: Column(
         children: [
           Container(
-            padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 20),
+            padding: const EdgeInsets.only(top: 0, left: 20, right: 20, bottom: 20),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFF10B981), Color(0xFF06B6D4)],
