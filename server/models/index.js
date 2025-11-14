@@ -21,6 +21,7 @@ db.products = require('./products')(sequelize, DataTypes);
 db.customers = require('./customers')(sequelize, DataTypes);
 db.deliveries = require('./deliveries')(sequelize, DataTypes);
 db.payments = require('./payments')(sequelize, DataTypes);
+db.customer_products = require('./customer_products')(sequelize, DataTypes);
 
 // Associations
 db.users.hasMany(db.products, { foreignKey: 'user_id', as: 'products' });
@@ -33,5 +34,11 @@ db.deliveries.belongsTo(db.customers, { foreignKey: 'customer_id', as: 'customer
 db.deliveries.belongsTo(db.products, { foreignKey: 'product_id', as: 'product' });
 db.customers.hasMany(db.payments, { foreignKey: 'customer_id', as: 'payments' });
 db.payments.belongsTo(db.customers, { foreignKey: 'customer_id', as: 'customer' });
+db.customers.hasMany(db.customer_products, { foreignKey: 'customer_id', as: 'customerProducts' });
+db.customer_products.belongsTo(db.customers, { foreignKey: 'customer_id', as: 'customer' });
+
+db.products.hasMany(db.customer_products, { foreignKey: 'product_id', as: 'productCustomers' });
+db.customer_products.belongsTo(db.products, { foreignKey: 'product_id', as: 'product' });
+
 
 module.exports = db;

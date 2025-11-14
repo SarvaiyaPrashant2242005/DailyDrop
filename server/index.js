@@ -17,6 +17,7 @@ require('./routes/productRoutes')(app);
 require('./routes/customerRoutes')(app);
 require('./routes/deliveryRoutes')(app);
 require('./routes/paymentRoutes')(app);
+require('./routes/customerProductRoutes')(app);
 app.get("/", (req, res) => {
   res.json({
     status: "OK",

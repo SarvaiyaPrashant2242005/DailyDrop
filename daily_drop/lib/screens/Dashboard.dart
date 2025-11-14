@@ -35,7 +35,7 @@ class _DashboardState extends State<Dashboard> {
       DashboardHome(onNavigate: (i) => setState(() => _currentIndex = i)),
       const OrdersScreen(),
       const CustomersScreen(),
-      const ProductsScreen(),
+      const ProductsScreen(), // Added ProductsScreen here
       const PaymentsScreen(),
     ];
     return Scaffold(
@@ -52,14 +52,13 @@ class _DashboardState extends State<Dashboard> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.local_shipping), label: "Delivery"),
-          BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: "Customers"),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: "Customers"),
           BottomNavigationBarItem(icon: Icon(Icons.payments), label: "Payments"),
         ],
       ),
     );
   }
 }
-
 class DashboardHome extends ConsumerWidget {
   final ValueChanged<int> onNavigate;
   const DashboardHome({super.key, required this.onNavigate});
@@ -236,7 +235,7 @@ class DashboardHome extends ConsumerWidget {
                     title: "Products",
                     icon: Icons.inventory_2,
                     color: Colors.purple.shade100,
-                    onTap: ()  {
+                    onTap: () {
                       onNavigate(3);
                     },
                   ),
@@ -246,7 +245,10 @@ class DashboardHome extends ConsumerWidget {
                     icon: Icons.payments,
                     color: Colors.orange.shade100,
                     onTap: () {
-                      onNavigate(3);
+                     Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const PaymentsScreen()),
+                      );
                     },
                   ),
                 ],

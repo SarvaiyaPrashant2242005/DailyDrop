@@ -18,3 +18,43 @@ exports.validateDeliveryUpdate=(b)=>{const e=[];const keys=['customer_id','produ
 
 exports.validatePaymentCreate=(b)=>{const e=[];if(!isPositiveInt(b.customer_id))e.push('customer_id must be positive integer');if(!isPositiveNumber(b.total_amount))e.push('total_amount must be number >= 0');if(!isPositiveNumber(b.paid_amount))e.push('paid_amount must be number >= 0');return result(e)}
 exports.validatePaymentUpdate=(b)=>{const e=[];const keys=['customer_id','total_amount','paid_amount'];if(keys.every(k=>b[k]===undefined))e.push('no updatable fields provided');if(b.customer_id!==undefined&&!isPositiveInt(b.customer_id))e.push('customer_id must be positive integer');if(b.total_amount!==undefined&&!isPositiveNumber(b.total_amount))e.push('total_amount must be number >= 0');if(b.paid_amount!==undefined&&!isPositiveNumber(b.paid_amount))e.push('paid_amount must be number >= 0');return result(e)}
+
+// Add at bottom
+
+exports.validateCustomerCreate = (b) => {
+  const e = [];
+  if (!b || typeof b !== 'object') e.push('invalid body');
+  if (!b.customer_name) e.push('customer_name is required');
+  if (!b.customer_address) e.push('customer_address is required');
+  if (!b.phone_no) e.push('phone_no is required');
+  return result(e);
+};
+
+exports.validateCustomerUpdate = (b) => {
+  const e = [];
+  if (b.customer_name !== undefined && !isNonEmptyString(b.customer_name)) e.push('customer_name must be non-empty');
+  if (b.customer_address !== undefined && !isNonEmptyString(b.customer_address)) e.push('customer_address must be non-empty');
+  if (b.phone_no !== undefined && !isNonEmptyString(b.phone_no)) e.push('phone_no must be non-empty');
+  return result(e);
+};
+
+exports.validateCustomerProductCreate = (b) => {
+  const e = [];
+  if (!b) e.push('invalid body');
+  if (!isPositiveInt(b.customer_id)) e.push('customer_id required');
+  if (!isPositiveInt(b.product_id)) e.push('product_id required');
+  if (!isPositiveInt(b.quantity)) e.push('quantity must be positive int');
+  if (!isPositiveNumber(b.price)) e.push('price must be number >= 0');
+  if (!isNonEmptyString(b.unit)) e.push('unit is required');
+  if (!isNonEmptyString(b.frequency)) e.push('frequency is required');
+  return result(e);
+};
+
+exports.validateCustomerProductUpdate = (b) => {
+  const e = [];
+  if (b.quantity !== undefined && !isPositiveInt(b.quantity)) e.push('quantity must be positive int');
+  if (b.price !== undefined && !isPositiveNumber(b.price)) e.push('price must be number >= 0');
+  if (b.unit !== undefined && !isNonEmptyString(b.unit)) e.push('unit must be non-empty');
+  if (b.frequency !== undefined && !isNonEmptyString(b.frequency)) e.push('frequency must be non-empty');
+  return result(e);
+};
