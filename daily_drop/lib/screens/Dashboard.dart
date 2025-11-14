@@ -1,6 +1,7 @@
 import 'package:daily_drop/provider/paymentsProvider.dart';
 import 'package:daily_drop/screens/CustomersScreen.dart';
 import 'package:daily_drop/screens/OrdersScreen.dart';
+import 'package:daily_drop/screens/PaymentDetailScreen.dart';
 import 'package:daily_drop/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,7 +36,6 @@ class _DashboardState extends State<Dashboard> {
       DashboardHome(onNavigate: (i) => setState(() => _currentIndex = i)),
       const OrdersScreen(),
       const CustomersScreen(),
-      const ProductsScreen(), // Added ProductsScreen here
       const PaymentsScreen(),
     ];
     return Scaffold(
@@ -51,14 +51,21 @@ class _DashboardState extends State<Dashboard> {
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.local_shipping), label: "Delivery"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.local_shipping),
+            label: "Delivery",
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.people), label: "Customers"),
-          BottomNavigationBarItem(icon: Icon(Icons.payments), label: "Payments"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.payments),
+            label: "Payments",
+          ),
         ],
       ),
     );
   }
 }
+
 class DashboardHome extends ConsumerWidget {
   final ValueChanged<int> onNavigate;
   const DashboardHome({super.key, required this.onNavigate});
@@ -101,7 +108,12 @@ class DashboardHome extends ConsumerWidget {
     final now = DateTime.now();
     final completedTodayIds = deliveriesAsync.maybeWhen(
       data: (list) => list
-          .where((d) => d.date.year == now.year && d.date.month == now.month && d.date.day == now.day)
+          .where(
+            (d) =>
+                d.date.year == now.year &&
+                d.date.month == now.month &&
+                d.date.day == now.day,
+          )
           .map((d) => d.customerId)
           .toSet(),
       orElse: () => <String>{},
@@ -120,7 +132,10 @@ class DashboardHome extends ConsumerWidget {
     );
 
     final completedCount = completedTodayIds.length;
-    final totalPending = totalPendingAsync.maybeWhen(data: (v) => v, orElse: () => 0.0);
+    final totalPending = totalPendingAsync.maybeWhen(
+      data: (v) => v,
+      orElse: () => 0.0,
+    );
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -187,8 +202,14 @@ class DashboardHome extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _statCard("Today's Deliveries", "$completedCount/$dueCount"),
-                        _statCard("Pending Amount", "₹${totalPending.toStringAsFixed(0)}"),
+                        _statCard(
+                          "Today's Deliveries",
+                          "$completedCount/$dueCount",
+                        ),
+                        _statCard(
+                          "Pending Amount",
+                          "₹${totalPending.toStringAsFixed(0)}",
+                        ),
                       ],
                     ),
                   ],
@@ -198,8 +219,10 @@ class DashboardHome extends ConsumerWidget {
             const SizedBox(height: 20),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text("Quick Actions",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              child: Text(
+                "Quick Actions",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 10),
             Padding(
@@ -231,24 +254,62 @@ class DashboardHome extends ConsumerWidget {
                     },
                   ),
                   _actionCard(
-                    context,
-                    title: "Products",
-                    icon: Icons.inventory_2,
-                    color: Colors.purple.shade100,
-                    onTap: () {
-                      onNavigate(3);
-                    },
-                  ),
+  context,
+  title: "Products",
+  icon: Icons.inventory_2,
+  color: Colors.purple.shade100,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          body: const ProductsScreen(),
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: 0, // (change if needed)
+            selectedItemColor: Colors.white,
+            unselectedItemColor: Colors.white70,
+            backgroundColor: Colors.blue,
+            type: BottomNavigationBarType.fixed,
+            onTap: (i) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => Dashboard(initialIndex: i),
+                ),
+              );
+            },
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home),
+                label: "Home",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.local_shipping),
+                label: "Delivery",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.people),
+                label: "Customers",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.payments),
+                label: "Payments",
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  },
+),
+
                   _actionCard(
                     context,
                     title: "Payments",
                     icon: Icons.payments,
                     color: Colors.orange.shade100,
                     onTap: () {
-                     Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PaymentsScreen()),
-                      );
+                      onNavigate(3);
                     },
                   ),
                 ],
@@ -257,7 +318,10 @@ class DashboardHome extends ConsumerWidget {
             const SizedBox(height: 20),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text('Recent Deliveries', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              child: Text(
+                'Recent Deliveries',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 10),
             Consumer(
@@ -268,33 +332,55 @@ class DashboardHome extends ConsumerWidget {
                   child: recentAsync.when(
                     data: (list) {
                       if (list.isEmpty) {
-                        return Text('No deliveries yet', style: TextStyle(color: Colors.grey.shade600));
+                        return Text(
+                          'No deliveries yet',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        );
                       }
                       return Column(
                         children: list.map((d) {
                           final primary = d.customerName;
-                          final productsSummary = d.items.map((i) => '${i.quantity}x ${i.productName}').join(', ');
+                          final productsSummary = d.items
+                              .map((i) => '${i.quantity}x ${i.productName}')
+                              .join(', ');
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF0FFF4),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFE6F4EA)),
+                              border: Border.all(
+                                color: const Color(0xFFE6F4EA),
+                              ),
                             ),
                             child: Row(
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(primary, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      Text(
+                                        primary,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                       const SizedBox(height: 4),
-                                      Text(productsSummary, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                                      Text(
+                                        productsSummary,
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 12,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
-                                const Icon(Icons.check_circle, color: Color(0xFF10B981)),
+                                const Icon(
+                                  Icons.check_circle,
+                                  color: Color(0xFF10B981),
+                                ),
                               ],
                             ),
                           );
@@ -325,14 +411,19 @@ Widget _statCard(String title, String value) {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title,
-            style: const TextStyle(color: Colors.white70, fontSize: 14)),
+        Text(
+          title,
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
         const SizedBox(height: 5),
-        Text(value,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     ),
   );
@@ -357,7 +448,7 @@ Widget _actionCard(
             color: Colors.grey.shade300,
             blurRadius: 5,
             offset: const Offset(1, 2),
-          )
+          ),
         ],
       ),
       child: Column(

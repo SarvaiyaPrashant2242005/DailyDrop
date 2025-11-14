@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../model/customer_model.dart';
 import '../provider/customerProvider.dart';
 import '../provider/paymentsProvider.dart';
+import 'package:daily_drop/widgets/loading.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
@@ -569,7 +570,7 @@ class _ExpandableDeliveryCardState extends State<_ExpandableDeliveryCard> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Center(
-                child: CircularProgressIndicator(),
+                child: LoadingOverlay(),
               ),
             ),
         ],

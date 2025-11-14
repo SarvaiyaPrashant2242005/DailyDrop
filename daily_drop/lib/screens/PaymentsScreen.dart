@@ -3,7 +3,6 @@ import 'package:daily_drop/model/customer_model.dart';
 import 'package:daily_drop/provider/customerProvider.dart';
 import 'package:daily_drop/provider/paymentsProvider.dart';
 import 'package:daily_drop/screens/PaymentDetailScreen.dart';
-import 'package:daily_drop/widgets/customer_payment_tile.dart';
 import 'package:daily_drop/widgets/loading.dart';
 import 'package:daily_drop/widgets/payment_summary_card.dart';
 
@@ -28,7 +27,7 @@ class PaymentsScreen extends ConsumerWidget {
             padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 30),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFFFF7043), Color(0xFFFF3D00)],
+                colors: [Color.fromARGB(255, 178, 149, 139), Color.fromARGB(255, 34, 39, 133)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -89,7 +88,6 @@ class PaymentsScreen extends ConsumerWidget {
                                   customer: c,
                                   pending: (map[c.id] ?? 0),
                                 ))
-                            .where((e) => e.pending > 0)
                             .toList()
                           ..sort((a, b) => b.pending.compareTo(a.pending));
 
@@ -98,7 +96,7 @@ class PaymentsScreen extends ConsumerWidget {
                             padding: const EdgeInsets.only(top: 40),
                             child: Center(
                               child: Text(
-                                'No pending payments',
+                                'No customers',
                                 style: TextStyle(color: Colors.grey.shade600),
                               ),
                             ),
@@ -109,9 +107,8 @@ class PaymentsScreen extends ConsumerWidget {
                           children: items
                               .map((e) => Padding(
                                     padding: const EdgeInsets.only(bottom: 12),
-                                    child: CustomerPaymentTile(
-                                      name: e.customer.name,
-                                      address: e.customer.address,
+                                    child: _CustomerTile(
+                                      customer: e.customer,
                                       pending: e.pending,
                                       onTap: () {
                                         Navigator.push(
@@ -148,4 +145,54 @@ class _CustomerPending {
   final Customer customer;
   final double pending;
   _CustomerPending({required this.customer, required this.pending});
+}
+
+class _CustomerTile extends StatelessWidget {
+  final Customer customer;
+  final double pending;
+  final VoidCallback onTap;
+  const _CustomerTile({required this.customer, required this.pending, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ListTile(
+        onTap: onTap,
+        title: Text(
+          customer.name,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(customer.address, maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 2),
+            Text('Contact: ${customer.phone}')
+          ],
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const Text('Pending', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            Text('₹${pending.toStringAsFixed(0)}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
 }
