@@ -1,6 +1,9 @@
 import 'package:daily_drop/screens/Dashboard.dart';
+import 'package:daily_drop/screens/LoginScreen.dart';
 import 'package:daily_drop/widgets/loading.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../provider/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -53,11 +56,23 @@ class _SplashScreenState extends State<SplashScreen>
       if (mounted) _fadeController.forward();
     });
 
-    // Navigate after delay
-    Future.delayed(const Duration(seconds: 3), () {
+    // Initialize stored auth and navigate after delay based on token
+    Future.delayed(const Duration(seconds: 2), () async {
+      if (!mounted) return;
+      final container =
+          ProviderScope.containerOf(context, listen: false);
+
+      // restore any stored user (non-blocking)
+      await container.read(authProvider.notifier).initFromStorage();
+
+      final hasToken =
+          await container.read(authProvider.notifier).hasToken();
+
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const Dashboard()),
+        MaterialPageRoute(
+          builder: (_) => hasToken ? const Dashboard() : const LoginScreen(),
+        ),
       );
     });
   }
@@ -187,7 +202,7 @@ class _SplashScreenState extends State<SplashScreen>
                       ],
                       stops: [
                         _rotationController.value,
-                        _rotationController.value + 0.1,
+                        (_rotationController.value + 0.1).clamp(0.0, 1.0),
                       ],
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
