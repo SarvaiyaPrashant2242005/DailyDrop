@@ -65,6 +65,8 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
     DeliveryFrequency frequency = DeliveryFrequency.everyday;
     AlternateDayStart alternateDayStart = AlternateDayStart.today;
     WeekDay weeklyDay = WeekDay.monday;
+    int monthlyDate = 1;
+    List<WeekDay> customWeekDays = [];
 
     showModalBottomSheet(
       context: context,
@@ -283,6 +285,173 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                       ),
                       const SizedBox(height: 16),
                     ],
+
+                    // Monthly date picker with calendar view
+                   // In _showProductConfigDialog method, replace the monthly section with this:
+
+// Monthly date picker as a button that opens popup
+if (frequency == DeliveryFrequency.monthly) ...[
+  const Text(
+    'Delivery Date',
+    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+  ),
+  const SizedBox(height: 8),
+  InkWell(
+    onTap: () {
+      showDialog(
+        context: context,
+        builder: (dialogContext) {
+          int tempMonthlyDate = monthlyDate;
+          return AlertDialog(
+            title: const Text(
+              'Select Day of Month',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: GridView.builder(
+                shrinkWrap: true,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                itemCount: 31,
+                itemBuilder: (context, index) {
+                  final day = index + 1;
+                  final isSelected = tempMonthlyDate == day;
+                  return InkWell(
+                    onTap: () {
+                      setSheetState(() => monthlyDate = day);
+                      Navigator.pop(dialogContext);
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected 
+                            ? const Color(0xFF4C8CFF) 
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isSelected 
+                              ? const Color(0xFF4C8CFF)
+                              : Colors.grey.shade300,
+                          width: isSelected ? 2 : 1,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$day',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? Colors.white : Colors.grey.shade800,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Day $monthlyDate of every month',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const Icon(
+            Icons.calendar_today,
+            color: Color(0xFF4C8CFF),
+            size: 20,
+          ),
+        ],
+      ),
+    ),
+  ),
+  const SizedBox(height: 16),
+],
+                    // Custom days selector
+                    if (frequency == DeliveryFrequency.custom) ...[
+                      const Text(
+                        'Select Delivery Days',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: WeekDay.values.map((day) {
+                            final isSelected = customWeekDays.contains(day);
+                            return FilterChip(
+                              label: Text(day.shortLabel),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                setSheetState(() {
+                                  if (selected) {
+                                    customWeekDays.add(day);
+                                  } else {
+                                    customWeekDays.remove(day);
+                                  }
+                                });
+                              },
+                              selectedColor: const Color(0xFF4C8CFF).withOpacity(0.2),
+                              checkmarkColor: const Color(0xFF4C8CFF),
+                              labelStyle: TextStyle(
+                                color: isSelected ? const Color(0xFF4C8CFF) : Colors.grey.shade700,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                              backgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(
+                                  color: isSelected ? const Color(0xFF4C8CFF) : Colors.grey.shade300,
+                                  width: 1.5,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      if (customWeekDays.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Please select at least one day',
+                            style: TextStyle(
+                              color: Colors.red.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+                    ],
                     
                     const SizedBox(height: 8),
                     SizedBox(
@@ -290,6 +459,14 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                       height: 50,
                       child: ElevatedButton(
                         onPressed: () {
+                          // Validate custom days selection
+                          if (frequency == DeliveryFrequency.custom && customWeekDays.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please select at least one delivery day')),
+                            );
+                            return;
+                          }
+
                           setState(() {
                             final existingIndex = _selectedProducts.indexWhere(
                               (p) => p.productId == product.id
@@ -305,6 +482,12 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                                 weeklyDay: frequency == DeliveryFrequency.weekly 
                                     ? weeklyDay 
                                     : null,
+                                monthlyDate: frequency == DeliveryFrequency.monthly
+                                    ? monthlyDate
+                                    : null,
+                                customWeekDays: frequency == DeliveryFrequency.custom
+                                    ? List.from(customWeekDays)
+                                    : null,
                               );
                             } else {
                               _selectedProducts.add(CustomerProduct(
@@ -319,6 +502,12 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                                     : null,
                                 weeklyDay: frequency == DeliveryFrequency.weekly 
                                     ? weeklyDay 
+                                    : null,
+                                monthlyDate: frequency == DeliveryFrequency.monthly
+                                    ? monthlyDate
+                                    : null,
+                                customWeekDays: frequency == DeliveryFrequency.custom
+                                    ? List.from(customWeekDays)
                                     : null,
                               ));
                             }
@@ -368,6 +557,10 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
       DeliveryFrequency frequency = existing.frequency;
       AlternateDayStart alternateDayStart = existing.alternateDayStart ?? AlternateDayStart.today;
       WeekDay weeklyDay = existing.weeklyDay ?? WeekDay.monday;
+      int monthlyDate = existing.monthlyDate ?? 1;
+      List<WeekDay> customWeekDays = existing.customWeekDays != null 
+          ? List.from(existing.customWeekDays!) 
+          : [];
 
       showModalBottomSheet(
         context: context,
@@ -432,7 +625,7 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                       ),
                       const SizedBox(height: 24),
                       
-                      // Quantity selector (same as add product)
+                      // Quantity selector
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -579,6 +772,125 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                         ),
                         const SizedBox(height: 16),
                       ],
+
+                      // Monthly date picker with calendar view
+                      if (frequency == DeliveryFrequency.monthly) ...[
+                        const Text(
+                          'Delivery Date (Day of Month)',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 7,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
+                            ),
+                            itemCount: 31,
+                            itemBuilder: (context, index) {
+                              final day = index + 1;
+                              final isSelected = monthlyDate == day;
+                              return InkWell(
+                                onTap: () => setSheetState(() => monthlyDate = day),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: isSelected 
+                                        ? const Color(0xFF4C8CFF) 
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isSelected 
+                                          ? const Color(0xFF4C8CFF)
+                                          : Colors.grey.shade300,
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    '$day',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected ? Colors.white : Colors.grey.shade800,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      if (frequency == DeliveryFrequency.custom) ...[
+                        const Text(
+                          'Select Delivery Days',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: WeekDay.values.map((day) {
+                              final isSelected = customWeekDays.contains(day);
+                              return FilterChip(
+                                label: Text(day.shortLabel),
+                                selected: isSelected,
+                                onSelected: (selected) {
+                                  setSheetState(() {
+                                    if (selected) {
+                                      customWeekDays.add(day);
+                                    } else {
+                                      customWeekDays.remove(day);
+                                    }
+                                  });
+                                },
+                                selectedColor: const Color(0xFF4C8CFF).withOpacity(0.2),
+                                checkmarkColor: const Color(0xFF4C8CFF),
+                                labelStyle: TextStyle(
+                                  color: isSelected ? const Color(0xFF4C8CFF) : Colors.grey.shade700,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                ),
+                                backgroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  side: BorderSide(
+                                    color: isSelected ? const Color(0xFF4C8CFF) : Colors.grey.shade300,
+                                    width: 1.5,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        if (customWeekDays.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              'Please select at least one day',
+                              style: TextStyle(
+                                color: Colors.red.shade600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 16),
+                      ],
                       
                       const SizedBox(height: 8),
                       SizedBox(
@@ -586,6 +898,14 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                         height: 50,
                         child: ElevatedButton(
                           onPressed: () {
+                            // Validate custom days selection
+                            if (frequency == DeliveryFrequency.custom && customWeekDays.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please select at least one delivery day')),
+                              );
+                              return;
+                            }
+
                             setState(() {
                               _selectedProducts[index] = existing.copyWith(
                                 quantity: quantity,
@@ -595,6 +915,12 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                                     : null,
                                 weeklyDay: frequency == DeliveryFrequency.weekly 
                                     ? weeklyDay 
+                                    : null,
+                                monthlyDate: frequency == DeliveryFrequency.monthly
+                                    ? monthlyDate
+                                    : null,
+                                customWeekDays: frequency == DeliveryFrequency.custom
+                                    ? List.from(customWeekDays)
                                     : null,
                               );
                             });
@@ -668,6 +994,10 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
       schedule += ' (${product.alternateDayStart!.label})';
     } else if (product.frequency == DeliveryFrequency.weekly && product.weeklyDay != null) {
       schedule += ' (${product.weeklyDay!.label})';
+    } else if (product.frequency == DeliveryFrequency.monthly && product.monthlyDate != null) {
+      schedule += ' (Day ${product.monthlyDate})';
+    } else if (product.frequency == DeliveryFrequency.custom && product.customWeekDays != null && product.customWeekDays!.isNotEmpty) {
+      schedule += ' (${product.customWeekDays!.map((d) => d.shortLabel).join(', ')})';
     }
     return schedule;
   }

@@ -166,29 +166,7 @@ class CustomersScreen extends ConsumerWidget {
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        onTap: (index) {
-          if (index == 0 || index == 1 || index == 2 || index == 3) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => Dashboard(initialIndex: index),
-              ),
-            );
-          }
-        },
-        backgroundColor: Colors.blue,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.local_shipping), label: 'Delivery'),
-          BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'Products'),
-          BottomNavigationBarItem(icon: Icon(Icons.payments), label: 'Payments'),
-        ],
-      ),
+     
     );
   }
 }

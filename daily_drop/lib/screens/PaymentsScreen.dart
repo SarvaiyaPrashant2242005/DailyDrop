@@ -22,8 +22,10 @@ class PaymentsScreen extends ConsumerWidget {
     return Scaffold(
       body: Column(
         children: [
+          // Full-width header with gradient
           Container(
-            padding: const EdgeInsets.only(top: 50, left: 30, right: 20, bottom: 20),
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 30),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFFFF7043), Color(0xFFFF3D00)],
@@ -35,26 +37,48 @@ class PaymentsScreen extends ConsumerWidget {
                 bottomRight: Radius.circular(30),
               ),
             ),
-            child: Column(
+            child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text('Payments', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-                SizedBox(height: 6),
-                Text('Track pending payments', style: TextStyle(color: Colors.white70)),
+              children: [
+                Text(
+                  'Payments',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Track pending payments',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                  ),
+                ),
               ],
             ),
           ),
+          
+          // Content area
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 totalPendingAsync.when(
                   data: (total) => PaymentSummaryCard(totalPending: total),
-                  loading: () => const Center(child: const LoadingOverlay()),
+                  loading: () => const Center(child: LoadingOverlay()),
                   error: (e, _) => Text('Error: $e'),
                 ),
                 const SizedBox(height: 20),
-                const Text('Customer Payments', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'Customer Payments',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
                 const SizedBox(height: 12),
                 customersAsync.when(
                   data: (customers) {
@@ -73,7 +97,10 @@ class PaymentsScreen extends ConsumerWidget {
                           return Padding(
                             padding: const EdgeInsets.only(top: 40),
                             child: Center(
-                              child: Text('No pending payments', style: TextStyle(color: Colors.grey.shade600)),
+                              child: Text(
+                                'No pending payments',
+                                style: TextStyle(color: Colors.grey.shade600),
+                              ),
                             ),
                           );
                         }
@@ -90,7 +117,9 @@ class PaymentsScreen extends ConsumerWidget {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (_) => PaymentDetailScreen(customer: e.customer),
+                                            builder: (_) => PaymentDetailScreen(
+                                              customer: e.customer,
+                                            ),
                                           ),
                                         );
                                       },
@@ -99,11 +128,11 @@ class PaymentsScreen extends ConsumerWidget {
                               .toList(),
                         );
                       },
-                      loading: () => const Center(child: const LoadingOverlay()),
+                      loading: () => const Center(child: LoadingOverlay()),
                       error: (e, _) => Text('Error: $e'),
                     );
                   },
-                  loading: () => const Center(child: const LoadingOverlay()),
+                  loading: () => const Center(child: LoadingOverlay()),
                   error: (e, _) => Text('Error: $e'),
                 ),
               ],

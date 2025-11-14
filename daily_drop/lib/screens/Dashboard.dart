@@ -1,10 +1,10 @@
 import 'package:daily_drop/provider/paymentsProvider.dart';
 import 'package:daily_drop/screens/CustomersScreen.dart';
+import 'package:daily_drop/screens/OrdersScreen.dart';
 import 'package:daily_drop/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'ProductsScreen.dart';
-import 'OrdersScreen.dart';
 import 'PaymentsScreen.dart';
 import 'package:intl/intl.dart';
 import '../model/customer_model.dart';
@@ -33,7 +33,7 @@ class _DashboardState extends State<Dashboard> {
     final pages = [
       DashboardHome(onNavigate: (i) => setState(() => _currentIndex = i)),
       const OrdersScreen(),
-      const ProductsScreen(),
+      const CustomersScreen(),
       const PaymentsScreen(),
     ];
     return Scaffold(
@@ -50,7 +50,7 @@ class _DashboardState extends State<Dashboard> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.local_shipping), label: "Delivery"),
-          BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: "Products"),
+          BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: "Customers"),
           BottomNavigationBarItem(icon: Icon(Icons.payments), label: "Payments"),
         ],
       ),
@@ -82,6 +82,9 @@ class DashboardHome extends ConsumerWidget {
         return weekdayMap[p.weeklyDay] == today.weekday;
       case DeliveryFrequency.monthly:
         return false;
+      case DeliveryFrequency.custom:
+        // TODO: Handle this case.
+        throw UnimplementedError();
     }
   }
 

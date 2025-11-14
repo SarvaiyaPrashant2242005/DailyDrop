@@ -9,6 +9,8 @@ class CustomerProduct {
   final DeliveryFrequency frequency;
   final AlternateDayStart? alternateDayStart; // For alternate day frequency
   final WeekDay? weeklyDay; // For weekly frequency
+  final int? monthlyDate; // For monthly frequency (1-31)
+  final List<WeekDay>? customWeekDays; // For custom frequency
 
   CustomerProduct({
     required this.productId,
@@ -19,6 +21,8 @@ class CustomerProduct {
     required this.frequency,
     this.alternateDayStart,
     this.weeklyDay,
+    this.monthlyDate,
+    this.customWeekDays,
   });
 
   CustomerProduct copyWith({
@@ -30,6 +34,8 @@ class CustomerProduct {
     DeliveryFrequency? frequency,
     AlternateDayStart? alternateDayStart,
     WeekDay? weeklyDay,
+    int? monthlyDate,
+    List<WeekDay>? customWeekDays,
   }) {
     return CustomerProduct(
       productId: productId ?? this.productId,
@@ -40,6 +46,8 @@ class CustomerProduct {
       frequency: frequency ?? this.frequency,
       alternateDayStart: alternateDayStart ?? this.alternateDayStart,
       weeklyDay: weeklyDay ?? this.weeklyDay,
+      monthlyDate: monthlyDate ?? this.monthlyDate,
+      customWeekDays: customWeekDays ?? this.customWeekDays,
     );
   }
 
@@ -53,6 +61,8 @@ class CustomerProduct {
       'frequency': frequency.toString(),
       'alternateDayStart': alternateDayStart?.toString(),
       'weeklyDay': weeklyDay?.toString(),
+      'monthlyDate': monthlyDate,
+      'customWeekDays': customWeekDays?.map((d) => d.toString()).toList(),
     };
   }
 
@@ -79,6 +89,15 @@ class CustomerProduct {
               orElse: () => WeekDay.monday,
             )
           : null,
+      monthlyDate: json['monthlyDate'] as int?,
+      customWeekDays: json['customWeekDays'] != null
+          ? (json['customWeekDays'] as List)
+              .map((d) => WeekDay.values.firstWhere(
+                    (e) => e.toString() == d,
+                    orElse: () => WeekDay.monday,
+                  ))
+              .toList()
+          : null,
     );
   }
 }
@@ -87,7 +106,8 @@ enum DeliveryFrequency {
   everyday('Everyday'),
   oneDayOnOneDayOff('Alternate day'),
   weekly('Weekly'),
-  monthly('Monthly');
+  monthly('Monthly'),
+  custom('Custom Days');
 
   final String label;
   const DeliveryFrequency(this.label);
@@ -112,6 +132,25 @@ enum WeekDay {
 
   final String label;
   const WeekDay(this.label);
+  
+  String get shortLabel {
+    switch (this) {
+      case WeekDay.monday:
+        return 'Mon';
+      case WeekDay.tuesday:
+        return 'Tue';
+      case WeekDay.wednesday:
+        return 'Wed';
+      case WeekDay.thursday:
+        return 'Thu';
+      case WeekDay.friday:
+        return 'Fri';
+      case WeekDay.saturday:
+        return 'Sat';
+      case WeekDay.sunday:
+        return 'Sun';
+    }
+  }
 }
 
 class Customer {
