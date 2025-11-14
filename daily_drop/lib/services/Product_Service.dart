@@ -1,53 +1,70 @@
-// lib/services/product_service.dart
+// lib/services/Product_Service.dart
 
+import 'dart:convert';
 import 'package:daily_drop/model/Product_model.dart';
-
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProductService {
-  // Simulated local storage - in real app, use SQLite or SharedPreferences
-  final List<Product> _products = <Product>[
-    Product(
-      id: '1',
-      name: 'Water Bottle',
-      defaultPrice: 20,
-      unit: 'bottle',
-    ),
-    Product(
-      id: '2',
-      name: 'Milk (500ml)',
-      defaultPrice: 30,
-      unit: '500ml',
-    ),
-    Product(
-      id: '3',
-      name: 'Milk (1L)',
-      defaultPrice: 55,
-      unit: '1L',
-    ),
-  ];
+  // Set base URL to match your server
+  static const String baseUrl = 'http://192.168.1.6:3000';
+
+  Future<Map<String, String>> _headers() async {
+    final sp = await SharedPreferences.getInstance();
+    final token = sp.getString('access_token');
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
 
   Future<List<Product>> getAllProducts() async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 500));
-    // Return a strongly typed list
-    return _products.toList();
+    final uri = Uri.parse('$baseUrl/api/products');
+    final res = await http.get(uri, headers: await _headers());
+    if (res.statusCode == 200) {
+      final list = jsonDecode(res.body) as List;
+      return list.map((e) => Product.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    throw Exception(_readError(res));
   }
 
   Future<void> addProduct(Product product) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _products.add(product);
+    final uri = Uri.parse('$baseUrl/api/products');
+    final res = await http.post(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(product.toServerJson()),
+    );
+    if (res.statusCode != 201) {
+      throw Exception(_readError(res));
+    }
   }
 
   Future<void> deleteProduct(String id) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _products.removeWhere((product) => product.id == id);
+    final uri = Uri.parse('$baseUrl/api/products/$id');
+    final res = await http.delete(uri, headers: await _headers());
+    if (res.statusCode != 200) {
+      throw Exception(_readError(res));
+    }
   }
 
   Future<void> updateProduct(Product product) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    final index = _products.indexWhere((p) => p.id == product.id);
-    if (index != -1) {
-      _products[index] = product;
+    final uri = Uri.parse('$baseUrl/api/products/${product.id}');
+    final res = await http.put(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode(product.toServerJson()),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(_readError(res));
     }
+  }
+
+  String _readError(http.Response res) {
+    try {
+      final m = jsonDecode(res.body);
+      if (m is Map && m['message'] is String) return m['message'];
+    } catch (_) {}
+    return 'Request failed (${res.statusCode})';
   }
 }

@@ -3,7 +3,7 @@
 import 'package:daily_drop/model/Product_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import '../services/product_service.dart';
+import '../services/Product_Service.dart';
 
 // Service Provider
 final productServiceProvider = Provider<ProductService>((ref) {

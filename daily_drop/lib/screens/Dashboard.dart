@@ -9,6 +9,7 @@ import 'PaymentsScreen.dart';
 import 'package:intl/intl.dart';
 import '../model/customer_model.dart';
 import '../provider/customerProvider.dart';
+import '../provider/auth_provider.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key, this.initialIndex = 0});
@@ -34,6 +35,7 @@ class _DashboardState extends State<Dashboard> {
       DashboardHome(onNavigate: (i) => setState(() => _currentIndex = i)),
       const OrdersScreen(),
       const CustomersScreen(),
+      const ProductsScreen(),
       const PaymentsScreen(),
     ];
     return Scaffold(
@@ -90,6 +92,8 @@ class DashboardHome extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+    final userName = authState.user?.name ?? 'User';
     final today = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
     final customersAsync = ref.watch(customersProvider);
     final deliveriesAsync = ref.watch(deliveriesProvider);
@@ -147,13 +151,30 @@ class DashboardHome extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Dashboard",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Dashboard",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            Text(
+                              userName,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 5),
                     Text(
@@ -207,8 +228,7 @@ class DashboardHome extends ConsumerWidget {
                     icon: Icons.people,
                     color: Colors.blue.shade100,
                     onTap: () {
-                      Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => CustomersScreen(),),);
+                      onNavigate(2);
                     },
                   ),
                   _actionCard(
@@ -216,8 +236,8 @@ class DashboardHome extends ConsumerWidget {
                     title: "Products",
                     icon: Icons.inventory_2,
                     color: Colors.purple.shade100,
-                    onTap: () {
-                      onNavigate(2);
+                    onTap: ()  {
+                      onNavigate(3);
                     },
                   ),
                   _actionCard(
