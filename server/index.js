@@ -10,12 +10,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.json({
-    status: "OK",
-    message: "Server running",
-  });
-});
 
 // Register routes
 require('./routes/usersroutes')(app);
@@ -23,6 +17,12 @@ require('./routes/productRoutes')(app);
 require('./routes/customerRoutes')(app);
 require('./routes/deliveryRoutes')(app);
 require('./routes/paymentRoutes')(app);
+app.get("/", (req, res) => {
+  res.json({
+    status: "OK",
+    message: "Server running",
+  });
+});
 
 const PORT = process.env.PORT || 5000;
 
