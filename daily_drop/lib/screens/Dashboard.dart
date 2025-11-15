@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import '../model/customer_model.dart';
 import '../provider/customerProvider.dart';
 import '../provider/auth_provider.dart';
+import 'LoginScreen.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key, this.initialIndex = 0});
@@ -185,6 +186,38 @@ class DashboardHome extends ConsumerWidget {
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              tooltip: 'Logout',
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Logout'),
+                                    content: const Text('Are you sure you want to logout?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(ctx).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      FilledButton(
+                                        onPressed: () => Navigator.of(ctx).pop(true),
+                                        child: const Text('Logout'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  await ref.read(authProvider.notifier).logout();
+                                  if (!context.mounted) return;
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                    (route) => false,
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.logout, color: Colors.white),
                             ),
                           ],
                         ),

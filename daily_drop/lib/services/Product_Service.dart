@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ProductService {
   // Set base URL to match your server
-  static const String baseUrl = 'http://192.168.1.6:3000';
+  static const String baseUrl = 'https://dailydrop-3d5q.onrender.com';
 
   Future<Map<String, String>> _headers() async {
     final sp = await SharedPreferences.getInstance();

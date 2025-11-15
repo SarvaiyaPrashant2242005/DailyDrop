@@ -23,7 +23,7 @@ class AuthState {
 
 final authServiceProvider = Provider<AuthService>((ref) {
   // Set base URL here
-  const baseUrl = 'http://192.168.1.6:3000';
+  const baseUrl = 'https://dailydrop-3d5q.onrender.com';
   return AuthService(baseUrl: baseUrl);
 });
 

@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PaymentsService {
-  static const String baseUrl = 'http://192.168.1.6:3000';
+  static const String baseUrl = 'https://dailydrop-3d5q.onrender.com';
 
   Future<Map<String, String>> _headers() async {
     final sp = await SharedPreferences.getInstance();
