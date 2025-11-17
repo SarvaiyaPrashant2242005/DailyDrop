@@ -152,7 +152,7 @@ class DashboardHome extends ConsumerWidget {
               ),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF6A5BFF), Color(0xFF4C8CFF)],
+                  colors: [Color(0xFF4C8CFF), Color(0xFF8B5CF6)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -195,29 +195,40 @@ class DashboardHome extends ConsumerWidget {
                                   context: context,
                                   builder: (ctx) => AlertDialog(
                                     title: const Text('Logout'),
-                                    content: const Text('Are you sure you want to logout?'),
+                                    content: const Text(
+                                      'Are you sure you want to logout?',
+                                    ),
                                     actions: [
                                       TextButton(
-                                        onPressed: () => Navigator.of(ctx).pop(false),
+                                        onPressed: () =>
+                                            Navigator.of(ctx).pop(false),
                                         child: const Text('Cancel'),
                                       ),
                                       FilledButton(
-                                        onPressed: () => Navigator.of(ctx).pop(true),
+                                        onPressed: () =>
+                                            Navigator.of(ctx).pop(true),
                                         child: const Text('Logout'),
                                       ),
                                     ],
                                   ),
                                 );
                                 if (confirm == true) {
-                                  await ref.read(authProvider.notifier).logout();
+                                  await ref
+                                      .read(authProvider.notifier)
+                                      .logout();
                                   if (!context.mounted) return;
                                   Navigator.of(context).pushAndRemoveUntil(
-                                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                    MaterialPageRoute(
+                                      builder: (_) => const LoginScreen(),
+                                    ),
                                     (route) => false,
                                   );
                                 }
                               },
-                              icon: const Icon(Icons.logout, color: Colors.white),
+                              icon: const Icon(
+                                Icons.logout,
+                                color: Colors.white,
+                              ),
                             ),
                           ],
                         ),
@@ -287,54 +298,55 @@ class DashboardHome extends ConsumerWidget {
                     },
                   ),
                   _actionCard(
-  context,
-  title: "Products",
-  icon: Icons.inventory_2,
-  color: Colors.purple.shade100,
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          body: const ProductsScreen(),
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: 0, // (change if needed)
-            selectedItemColor: Colors.white,
-            unselectedItemColor: Colors.white70,
-            backgroundColor: Colors.blue,
-            type: BottomNavigationBarType.fixed,
-            onTap: (i) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => Dashboard(initialIndex: i),
-                ),
-              );
-            },
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home),
-                label: "Home",
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.local_shipping),
-                label: "Delivery",
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.people),
-                label: "Customers",
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.payments),
-                label: "Payments",
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  },
-),
+                    context,
+                    title: "Products",
+                    icon: Icons.inventory_2,
+                    color: Colors.purple.shade100,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => Scaffold(
+                            body: const ProductsScreen(),
+                            bottomNavigationBar: BottomNavigationBar(
+                              currentIndex: 0, // (change if needed)
+                              selectedItemColor: Colors.white,
+                              unselectedItemColor: Colors.white70,
+                              backgroundColor: Colors.blue,
+                              
+                              type: BottomNavigationBarType.fixed,
+                              onTap: (i) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => Dashboard(initialIndex: i),
+                                  ),
+                                );
+                              },
+                              items: const [
+                                BottomNavigationBarItem(
+                                  icon: Icon(Icons.home),
+                                  label: "Home",
+                                ),
+                                BottomNavigationBarItem(
+                                  icon: Icon(Icons.local_shipping),
+                                  label: "Delivery",
+                                ),
+                                BottomNavigationBarItem(
+                                  icon: Icon(Icons.people),
+                                  label: "Customers",
+                                ),
+                                BottomNavigationBarItem(
+                                  icon: Icon(Icons.payments),
+                                  label: "Payments",
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
 
                   _actionCard(
                     context,

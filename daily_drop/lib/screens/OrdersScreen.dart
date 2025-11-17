@@ -102,7 +102,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
             padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 30),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF10B981), Color(0xFF06B6D4)],
+               colors: [Color(0xFF4C8CFF), Color(0xFF8B5CF6)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),

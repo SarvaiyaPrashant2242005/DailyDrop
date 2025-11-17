@@ -35,7 +35,7 @@ class PaymentDetailScreen extends ConsumerWidget {
               ),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color.fromARGB(255, 178, 149, 139), Color.fromARGB(255, 34, 39, 133)],
+                  colors: [Color(0xFF4C8CFF), Color(0xFF8B5CF6)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),

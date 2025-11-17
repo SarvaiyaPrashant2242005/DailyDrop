@@ -27,7 +27,7 @@ class PaymentsScreen extends ConsumerWidget {
             padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 30),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color.fromARGB(255, 178, 149, 139), Color.fromARGB(255, 34, 39, 133)],
+                colors: [Color(0xFF4C8CFF), Color(0xFF8B5CF6)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
