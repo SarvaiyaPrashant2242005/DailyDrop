@@ -48,7 +48,7 @@ exports.findAll = async (req, res) => {
       {
         model: Customer,
         as: 'customer',
-        attributes: ['customer_name', 'customer_address'],
+        attributes: ['customerName', 'customer_address'],
         where: { user_id: req.userId },
       },
       { model: Product, as: 'product' },
