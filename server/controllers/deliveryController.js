@@ -41,22 +41,20 @@ exports.create = async (req, res) => {
 };
 
 // List deliveries (admin: all, user: only own via joins)
+// List deliveries for the logged-in user's customers
 exports.findAll = async (req, res) => {
   try {
-    const user = await User.findByPk(req.userId);
-    const isAdmin = user && user.role === 'admin';
+    const include = [
+      {
+        model: Customer,
+        as: 'customer',
+        attributes: [],
+        where: { user_id: req.userId },
+      },
+      { model: Product, as: 'product' },
+    ];
 
-    const where = {};
-    const include = [];
-
-    if (!isAdmin) {
-      include.push({ model: Customer, as: 'customer', attributes: [], where: { user_id: req.userId } });
-    } else {
-      include.push({ model: Customer, as: 'customer' });
-    }
-    include.push({ model: Product, as: 'product' });
-
-    const deliveries = await Delivery.findAll({ where, include });
+    const deliveries = await Delivery.findAll({ include });
     res.send(deliveries);
   } catch (err) {
     res.status(500).send({ message: err.message });

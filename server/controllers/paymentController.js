@@ -34,25 +34,25 @@ exports.create = async (req, res) => {
 };
 
 // List payments (admin: all, user: only own customers)
+// List payments (admin: all, user: only own customers)
+// List payments for the logged-in user's customers
 exports.findAll = async (req, res) => {
   try {
-    const user = await User.findByPk(req.userId);
-    const isAdmin = user && user.role === 'admin';
-
-    const include = [];
-    if (!isAdmin) {
-      include.push({ model: Customer, as: 'customer', attributes: [], where: { user_id: req.userId } });
-    } else {
-      include.push({ model: Customer, as: 'customer' });
-    }
-
-    const payments = await Payment.findAll({ include });
+    const payments = await Payment.findAll({
+      include: [
+        {
+          model: Customer,
+          as: 'customer',
+          attributes: [],
+          where: { user_id: req.userId },
+        },
+      ],
+    });
     res.send(payments);
   } catch (err) {
     res.status(500).send({ message: err.message });
   }
 };
-
 // Get one payment
 exports.findOne = async (req, res) => {
   try {

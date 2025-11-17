@@ -29,16 +29,12 @@ exports.create = async (req, res) => {
 // Get all products (admin: all, user: own)
 exports.findAll = async (req, res) => {
   try {
-    const user = await User.findByPk(req.userId);
-    const where = user && user.role === 'admin' ? {} : { user_id: req.userId };
-
-    const products = await Product.findAll({ where });
+    const products = await Product.findAll({ where: { user_id: req.userId } });
     res.send(products);
   } catch (err) {
     res.status(500).send({ message: err.message });
   }
 };
-
 // Get one product by id (owner or admin)
 exports.findOne = async (req, res) => {
   try {

@@ -25,13 +25,10 @@ exports.create = async (req, res) => {
   }
 };
 
-// Get all customers (admin: all, user: own)
+// Get all customers for the logged-in user
 exports.findAll = async (req, res) => {
   try {
-    const user = await User.findByPk(req.userId);
-    const where = user && user.role === 'admin' ? {} : { user_id: req.userId };
-
-    const customers = await Customer.findAll({ where });
+    const customers = await Customer.findAll({ where: { user_id: req.userId } });
     res.send(customers);
   } catch (err) {
     res.status(500).send({ message: err.message });
