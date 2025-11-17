@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../model/auth_model.dart';
+import '../provider/customerProvider.dart';
+import '../provider/productProvider.dart';
+import '../provider/paymentsProvider.dart';
 
 class AuthState {
   final bool loading;
@@ -54,6 +57,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final sp = await SharedPreferences.getInstance();
       await sp.setString(_kUser, jsonEncode(user.toJson()));
       await sp.setString(_kToken, user.accessToken);
+
+      // Invalidate user-scoped data providers so they reload for this user
+      ref.invalidate(customersProvider);
+      ref.invalidate(productsProvider);
+      ref.invalidate(deliveriesProvider);
+      ref.invalidate(recentDeliveriesProvider);
+      ref.invalidate(totalPendingProvider);
+      ref.invalidate(pendingByCustomerProvider);
+
       state = state.copyWith(loading: false, user: user, error: null);
     } catch (e) {
       state = state.copyWith(loading: false, error: e.toString());
@@ -80,6 +92,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final sp = await SharedPreferences.getInstance();
     await sp.remove(_kUser);
     await sp.remove(_kToken);
+
+    // Clear all user-scoped data providers
+    ref.invalidate(customersProvider);
+    ref.invalidate(productsProvider);
+    ref.invalidate(deliveriesProvider);
+    ref.invalidate(recentDeliveriesProvider);
+    ref.invalidate(totalPendingProvider);
+    ref.invalidate(pendingByCustomerProvider);
+
     state = const AuthState();
   }
 
