@@ -48,7 +48,7 @@ exports.findAll = async (req, res) => {
       {
         model: Customer,
         as: 'customer',
-        attributes: [],
+        attributes: ['customer_name', 'customer_address'],
         where: { user_id: req.userId },
       },
       { model: Product, as: 'product' },
@@ -60,7 +60,6 @@ exports.findAll = async (req, res) => {
     res.status(500).send({ message: err.message });
   }
 };
-
 // Get one delivery
 exports.findOne = async (req, res) => {
   try {
