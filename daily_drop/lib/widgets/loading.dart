@@ -5,12 +5,14 @@ class LoadingOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: IgnorePointer(
-        ignoring: true,
-        child: Container(
-          color: Colors.black.withOpacity(0.4),
-          child: Center(
+    return IgnorePointer(
+      ignoring: true,
+      child: Container(
+        color: Colors.black.withOpacity(0.4),
+        child: Center(
+          child: SizedBox(
+            width: 120,
+            height: 120,
             child: Image.asset(
               'assets/images/loader.gif',
               width: 120,

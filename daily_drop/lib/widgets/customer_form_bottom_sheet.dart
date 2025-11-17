@@ -6,6 +6,7 @@ import 'package:daily_drop/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../model/customer_model.dart';
+import '../provider/customerProvider.dart';
 import '../provider/productProvider.dart';
 
 class CustomerFormBottomSheet extends ConsumerStatefulWidget {
@@ -461,9 +462,11 @@ if (frequency == DeliveryFrequency.monthly) ...[
                         onPressed: () {
                           // Validate custom days selection
                           if (frequency == DeliveryFrequency.custom && customWeekDays.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please select at least one delivery day')),
-                            );
+                            showTopSnackBar(
+  context,
+  'Please add at least one product',
+  isError: true,
+);
                             return;
                           }
 
@@ -963,28 +966,55 @@ if (frequency == DeliveryFrequency.monthly) ...[
         return;
       }
 
-      final controller = CustomerController(ref);
-      
-      if (isEditMode) {
-        final updatedCustomer = widget.customer!.copyWith(
-          name: _nameController.text,
-          address: _addressController.text,
-          phone: _phoneController.text,
-          products: _selectedProducts,
-        );
-        controller.updateCustomer(
-          customer: updatedCustomer,
-          context: context,
-        );
-      } else {
-        controller.addCustomer(
-          name: _nameController.text,
-          address: _addressController.text,
-          phone: _phoneController.text,
-          products: _selectedProducts,
-          context: context,
-        );
-      }
+      final customersState = ref.read(customersProvider);
+      final name = _nameController.text.trim();
+
+      customersState.whenData((customers) {
+        final lowerName = name.toLowerCase();
+        final hasDuplicate = customers.any((c) {
+          if (isEditMode && c.id == widget.customer!.id) {
+            return false;
+          }
+          return c.name.toLowerCase() == lowerName;
+        });
+
+        if (hasDuplicate) {
+          showTopSnackBar(
+  context,
+  'Customer name already exists',
+  isError: true,
+);
+          return;
+        }
+
+        final controller = CustomerController(ref);
+
+        if (isEditMode) {
+          final updatedCustomer = widget.customer!.copyWith(
+            name: name,
+            address: _addressController.text,
+            phone: _phoneController.text,
+            products: _selectedProducts,
+          );
+
+          Navigator.of(context).pop();
+
+          controller.updateCustomer(
+            customer: updatedCustomer,
+            context: context,
+          );
+        } else {
+          Navigator.of(context).pop();
+
+          controller.addCustomer(
+            name: name,
+            address: _addressController.text,
+            phone: _phoneController.text,
+            products: _selectedProducts,
+            context: context,
+          );
+        }
+      });
     }
   }
 
@@ -1545,4 +1575,69 @@ class _ProductSearchBottomSheetState extends State<_ProductSearchBottomSheet> {
       ),
     );
   }
+}
+
+
+void showTopSnackBar(
+  BuildContext context,
+  String message, {
+  bool isError = false,
+}) {
+  final overlay = Overlay.of(context);
+  if (overlay == null) return;
+
+  final color = isError ? const Color(0xFFE11D48) : const Color(0xFF16A34A);
+
+  final entry = OverlayEntry(
+    builder: (ctx) => Positioned(
+      top: MediaQuery.of(ctx).padding.top + 16,
+      left: 16,
+      right: 16,
+      child: Material(
+        color: Colors.transparent,
+        child: AnimatedSlide(
+          duration: const Duration(milliseconds: 200),
+          offset: const Offset(0, 0),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isError ? Icons.error_outline : Icons.check_circle_outline,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  overlay.insert(entry);
+  Future.delayed(const Duration(seconds: 3)).then((_) {
+    if (entry.mounted) entry.remove();
+  });
 }

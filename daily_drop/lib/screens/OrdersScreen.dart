@@ -8,6 +8,7 @@ import '../provider/customerProvider.dart';
 import '../provider/paymentsProvider.dart';
 import 'package:daily_drop/widgets/loading.dart';
 
+
 class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
 
@@ -564,15 +565,15 @@ class _ExpandableDeliveryCardState extends State<_ExpandableDeliveryCard> {
           
           // Loading overlay when completing
           if (_isCompleting)
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Center(
-                child: LoadingOverlay(),
-              ),
-            ),
+  Container(
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.9),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: const Center(
+      child: LoadingOverlay(),  // inside Center in a ListView item
+    ),
+  ),
         ],
       ),
     );

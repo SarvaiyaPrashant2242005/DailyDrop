@@ -35,9 +35,11 @@ class CustomersNotifier extends StateNotifier<AsyncValue<List<Customer>>> {
 
   Future<void> addCustomer(Customer customer) async {
     try {
+      state = const AsyncValue.loading();
       await _service.addCustomer(customer);
       await loadCustomers();
-    } catch (e) {
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
       rethrow;
     }
   }

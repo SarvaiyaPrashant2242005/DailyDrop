@@ -32,16 +32,18 @@ class CustomerController {
       await ref.read(customersProvider.notifier).addCustomer(customer);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Customer added successfully')),
-        );
-        Navigator.pop(context);
+       showTopSnackBar(
+  context,
+  'Customer added successfully',
+);
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding customer: $e')),
-        );
+       showTopSnackBar(
+  context,
+  'Error adding customer: $e',
+  isError: true,
+);
       }
     }
   }
