@@ -3,7 +3,6 @@ import 'package:daily_drop/provider/customerProvider.dart';
 import 'package:daily_drop/provider/paymentsProvider.dart';
 import 'package:daily_drop/screens/PaymentDetailScreen.dart';
 import 'package:daily_drop/widgets/loading.dart';
-import 'package:daily_drop/widgets/payment_summary_card.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,6 +29,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     final totalPendingAsync = ref.watch(totalPendingProvider);
     final customersAsync = ref.watch(customersProvider);
     final pendingMapAsync = ref.watch(pendingByCustomerProvider);
+    final netBalanceAsync = ref.watch(totalNetBalanceProvider);
 
     return Scaffold(
       body: Column(
@@ -73,18 +73,100 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             ),
           ),
           
-          // Content area
+          // Sticky Balance Card
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Total Pending
+                totalPendingAsync.when(
+                  data: (total) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Total Pending',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '₹${total.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFF6B35),
+                        ),
+                      ),
+                    ],
+                  ),
+                  loading: () => const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  error: (e, _) => Text('Error: $e', style: const TextStyle(fontSize: 12)),
+                ),
+                
+                // Net Balance (Right side)
+                netBalanceAsync.when(
+                  data: (netTotal) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'Net Balance',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '₹${netTotal.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: netTotal > 0 
+                              ? const Color(0xFFFF6B35) 
+                              : netTotal < 0 
+                                  ? const Color(0xFF10B981)
+                                  : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  loading: () => const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  error: (e, _) => Text('Error: $e', style: const TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+          
+          // Scrollable Content
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                totalPendingAsync.when(
-                  data: (total) => PaymentSummaryCard(totalPending: total),
-                  loading: () => const Center(child: LoadingOverlay()),
-                  error: (e, _) => Text('Error: $e'),
-                ),
-                const SizedBox(height: 20),
-                
                 // Search Bar
                 TextField(
                   controller: _searchController,
@@ -138,12 +220,17 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                         }).toList();
 
                         final items = filteredCustomers
-                            .map((c) => _CustomerPending(
+                            .map((c) => _CustomerBalance(
                                   customer: c,
-                                  pending: (map[c.id] ?? 0),
+                                  balance: (map[c.id] ?? 0),
                                 ))
                             .toList()
-                          ..sort((a, b) => b.pending.compareTo(a.pending));
+                          ..sort((a, b) {
+                            // Sort by: 1) Non-zero first, 2) By absolute value descending
+                            if (a.balance == 0 && b.balance != 0) return 1;
+                            if (a.balance != 0 && b.balance == 0) return -1;
+                            return b.balance.abs().compareTo(a.balance.abs());
+                          });
 
                         if (items.isEmpty) {
                           return Padding(
@@ -173,7 +260,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                                     padding: const EdgeInsets.only(bottom: 12),
                                     child: _CustomerTile(
                                       customer: e.customer,
-                                      pending: e.pending,
+                                      balance: e.balance,
                                       onTap: () {
                                         Navigator.push(
                                           context,
@@ -205,20 +292,39 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   }
 }
 
-class _CustomerPending {
+class _CustomerBalance {
   final Customer customer;
-  final double pending;
-  _CustomerPending({required this.customer, required this.pending});
+  final double balance;
+  _CustomerBalance({required this.customer, required this.balance});
 }
 
 class _CustomerTile extends StatelessWidget {
   final Customer customer;
-  final double pending;
+  final double balance;
   final VoidCallback onTap;
-  const _CustomerTile({required this.customer, required this.pending, required this.onTap});
+  const _CustomerTile({
+    required this.customer, 
+    required this.balance, 
+    required this.onTap
+  });
 
   @override
   Widget build(BuildContext context) {
+    // Determine status text and color
+    String statusText;
+    Color statusColor;
+    
+    if (balance > 0) {
+      statusText = 'Pending';
+      statusColor = const Color(0xFFFF6B35); // Orange for pending
+    } else if (balance < 0) {
+      statusText = 'Advance';
+      statusColor = const Color(0xFF10B981); // Green for advance
+    } else {
+      statusText = 'Settled';
+      statusColor = Colors.grey.shade600; // Grey for zero balance
+    }
+    
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -251,9 +357,18 @@ class _CustomerTile extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            const Text('Pending', style: TextStyle(fontSize: 12, color: Colors.grey)),
-            Text('₹${pending.toStringAsFixed(0)}',
-                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+            Text(
+              statusText,
+              style: TextStyle(fontSize: 12, color: statusColor),
+            ),
+            Text(
+              '₹${balance.abs().toStringAsFixed(0)}',
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.bold,
+                color: statusColor,
+              ),
+            ),
           ],
         ),
       ),

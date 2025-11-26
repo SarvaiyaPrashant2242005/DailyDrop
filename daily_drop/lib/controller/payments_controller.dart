@@ -46,9 +46,11 @@ class PaymentsController {
 
     await ref.read(deliveriesProvider.notifier).add(delivery);
 
-    // Also refresh totals selectors (computed from service)
+    // Refresh all delivery and payment related providers
+    ref.invalidate(deliveriesProvider);
     ref.invalidate(totalPendingProvider);
     ref.invalidate(pendingByCustomerProvider);
+    ref.invalidate(deliveriesByCustomerProvider(customer.id));
   }
   Future<void> undoTodayDelivery({
   required String customerId,
@@ -65,22 +67,13 @@ class PaymentsController {
     return;
   }
 
-  // 2-minute window check
-  final diff = DateTime.now().difference(latest.date);
-  if (diff > const Duration(minutes: 2)) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Undo window expired')),
-      );
-    }
-    return;
-  }
-
   await ref.read(deliveriesProvider.notifier).removeById(latest.id);
 
-  // Recompute pending totals
+  // Refresh all delivery and payment related providers
+  ref.invalidate(deliveriesProvider);
   ref.invalidate(totalPendingProvider);
   ref.invalidate(pendingByCustomerProvider);
+  ref.invalidate(deliveriesByCustomerProvider(customerId));
 
   if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -110,15 +103,22 @@ class PaymentsController {
     );
 
     await ref.read(paymentRecordsProvider.notifier).add(record);
-    // recompute pendings
+    
+    // Refresh all payment and delivery related providers
+    ref.invalidate(paymentRecordsProvider);
+    ref.invalidate(deliveriesProvider);
     ref.invalidate(totalPendingProvider);
     ref.invalidate(pendingByCustomerProvider);
+    ref.invalidate(deliveriesByCustomerProvider(customerId));
+    ref.invalidate(paymentsByCustomerProvider(customerId));
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment recorded')),
+        const SnackBar(
+          content: Text('Payment recorded successfully'),
+          backgroundColor: Color(0xFF10B981),
+        ),
       );
-      Navigator.pop(context); // close bottom sheet if open
     }
   }
 }

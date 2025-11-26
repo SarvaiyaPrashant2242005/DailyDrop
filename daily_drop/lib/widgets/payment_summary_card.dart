@@ -6,6 +6,9 @@ class PaymentSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isNegative = totalPending < 0;
+    final displayAmount = totalPending.abs();
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -22,10 +25,19 @@ class PaymentSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Total Pending', style: TextStyle(fontSize: 16)),
+          Text(
+            isNegative ? 'Total Advance' : 'Total Pending',
+            style: const TextStyle(fontSize: 16),
+          ),
           const SizedBox(height: 8),
-          Text('₹${totalPending.toStringAsFixed(0)}',
-              style: const TextStyle(fontSize: 28, color: Color(0xFFEF6C00), fontWeight: FontWeight.bold)),
+          Text(
+            '₹${displayAmount.toStringAsFixed(0)}',
+            style: TextStyle(
+              fontSize: 28,
+              color: isNegative ? const Color(0xFF10B981) : const Color(0xFFEF6C00),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );

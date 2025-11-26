@@ -232,7 +232,7 @@ class _ProdAgg {
   _ProdAgg({required this.unitPrice});
 }
 
-class _TransactionsTab extends StatelessWidget {
+class _TransactionsTab extends StatefulWidget {
   final Customer customer;
   final AsyncValue<List<Delivery>> deliveriesAsync;
   final AsyncValue<List<PaymentRecord>> paymentsAsync;
@@ -247,46 +247,119 @@ class _TransactionsTab extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      children: [
-        // Pending card
-        pendingMapAsync.when(
-          data: (map) {
-            final pending = (map[customer.id] ?? 0);
-            return Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Pending Amount', style: TextStyle(fontWeight: FontWeight.w600)),
-                  Text('₹${pending.toStringAsFixed(0)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF6B35), fontSize: 18)),
-                ],
-              ),
-            );
-          },
-          loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
-        ),
+  State<_TransactionsTab> createState() => _TransactionsTabState();
+}
 
-        const SizedBox(height: 16),
+class _TransactionsTabState extends State<_TransactionsTab> {
+  bool _isAddingPayment = false;
+  bool _isReloadingTransactions = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        ListView(
+          children: [
+            // Pending card with Receive Payment button
+            widget.pendingMapAsync.when(
+              data: (map) {
+                final pending = (map[widget.customer.id] ?? 0);
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Pending Amount', style: TextStyle(fontWeight: FontWeight.w600)),
+                          Text(
+                            '₹${pending.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: pending >= 0 ? const Color(0xFFFF6B35) : const Color(0xFF10B981),
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: _isAddingPayment ? null : () async {
+                            await showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => ReceivePaymentBottomSheet(
+                                pendingAmount: pending,
+                                onConfirm: (amount) async {
+                                  Navigator.pop(context); // Close bottom sheet first
+                                  
+                                  setState(() {
+                                    _isReloadingTransactions = true;
+                                  });
+                                  
+                                  final controller = PaymentsController(widget.ref);
+                                  await controller.addPayment(
+                                    customerId: widget.customer.id,
+                                    amount: amount,
+                                    context: context,
+                                  );
+                                  
+                                  // Refresh the data
+                                  widget.ref.invalidate(deliveriesByCustomerProvider(widget.customer.id));
+                                  widget.ref.invalidate(paymentsByCustomerProvider(widget.customer.id));
+                                  widget.ref.invalidate(pendingByCustomerProvider);
+                                  
+                                  // Wait for data to refresh
+                                  await Future.delayed(const Duration(milliseconds: 500));
+                                  
+                                  if (mounted) {
+                                    setState(() {
+                                      _isReloadingTransactions = false;
+                                    });
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            disabledBackgroundColor: Colors.grey.shade300,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: const Icon(Icons.payment, size: 20),
+                          label: const Text('Receive Payment'),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+
+            const SizedBox(height: 16),
 
         // Ledger-style statement
-        deliveriesAsync.when(
+        widget.deliveriesAsync.when(
           data: (deliveries) {
-            return paymentsAsync.when(
+            return widget.paymentsAsync.when(
               data: (payments) {
                 // Build a chronological list of all transactions
                 final List<_TxnEntry> allTxns = [];
@@ -318,7 +391,7 @@ class _TransactionsTab extends StatelessWidget {
                   );
                 }
 
-                // Sort by date (oldest first for running balance)
+                // Sort by date (oldest first)
                 allTxns.sort((a, b) => a.date.compareTo(b.date));
 
                 // Calculate running balance
@@ -332,16 +405,13 @@ class _TransactionsTab extends StatelessWidget {
                   txn.balance = runningBalance;
                 }
 
-                // Reverse for display (newest first)
-                final reversed = allTxns.reversed.toList();
-
-                // Group by date for headers
+                // Group by date for headers (oldest first, newest last)
                 final Map<String, List<_TxnEntry>> byDate = {};
-                for (final txn in reversed) {
+                for (final txn in allTxns) {
                   final key = DateFormat('yyyy-MM-dd').format(txn.date);
                   byDate.putIfAbsent(key, () => []).add(txn);
                 }
-                final dates = byDate.keys.toList();
+                final dates = byDate.keys.toList()..sort();
 
                 final children = <Widget>[];
 
@@ -511,46 +581,18 @@ class _TransactionsTab extends StatelessWidget {
           error: (e, _) => Text('Error: $e'),
         ),
 
-        const SizedBox(height: 16),
-
-        // Receive payment button
-        pendingMapAsync.when(
-          data: (map) {
-            final pending = (map[customer.id] ?? 0);
-            if (pending <= 0) return const SizedBox.shrink();
-            return SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => ReceivePaymentBottomSheet(
-                      pendingAmount: pending,
-                      onConfirm: (amount) {
-                        final controller = PaymentsController(ref);
-                        controller.addPayment(
-                          customerId: customer.id,
-                          amount: amount,
-                          context: context,
-                        );
-                      },
-                    ),
-                  );
-                },
-                child: const Text('Receive Payment'),
-              ),
-            );
-          },
-          loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+            const SizedBox(height: 16),
+          ],
         ),
+        
+        // Loading overlay when reloading transactions
+        if (_isReloadingTransactions)
+          Container(
+            color: Colors.white.withValues(alpha: 0.9),
+            child: const Center(
+              child: LoadingOverlay(),
+            ),
+          ),
       ],
     );
   }

@@ -40,16 +40,14 @@ class PaymentsService {
     }
   }
 
-  // Delete all delivery rows belonging to a grouped UI delivery (same customerId and timestamp minute)
+  // Delete all delivery rows belonging to a grouped UI delivery
   Future<void> removeDelivery(String deliveryGroupId) async {
-    // We encode delivery.id as '<customerId>|<iso>' when building from server.
     final parts = deliveryGroupId.split('|');
     if (parts.length != 2) return;
     final customerId = parts[0];
     final iso = parts[1];
     final groupTime = DateTime.tryParse(iso);
 
-    // Fetch rows then delete those that belong to the same minute window
     final rows = await _fetchDeliveryRows();
     final toDelete = rows.where((r) {
       final cid = _asString(r['customer_id']);
@@ -100,7 +98,7 @@ class PaymentsService {
       final customerName = customer?['customer_name']?.toString() ?? 'Customer';
       final customerAddress = customer?['customer_address']?.toString() ?? '';
       list.add(Delivery(
-        id: entry.key, // composite id used for undo group
+        id: entry.key,
         customerId: _asString(first['customer_id']),
         customerName: customerName,
         customerAddress: customerAddress,
@@ -109,7 +107,6 @@ class PaymentsService {
       ));
     }
 
-    // Sort recent first
     list.sort((a, b) => b.date.compareTo(a.date));
     return list;
   }
@@ -160,7 +157,6 @@ class PaymentsService {
     final list = jsonDecode(res.body) as List;
     return list.map((m) {
       final mm = m as Map<String, dynamic>;
-      // Interpret paid_amount as payment amount
       final amount = _toDouble(mm['paid_amount']);
       final createdAt = DateTime.parse(mm['createdAt']);
       return PaymentRecord(
@@ -172,23 +168,41 @@ class PaymentsService {
     }).toList();
   }
 
-  Future<Map<String, double>> computePendingByCustomer() async {
+  // NEW METHOD: Compute net balance by customer (including negative values for advances)
+  Future<Map<String, double>> computeNetBalanceByCustomer() async {
     final deliveries = await getDeliveries();
-    final Map<String, double> pending = {};
+    final Map<String, double> netBalance = {};
+    
+    // Calculate total deliveries per customer
     for (final d in deliveries) {
-      pending[d.customerId] = (pending[d.customerId] ?? 0) + d.total;
+      netBalance[d.customerId] = (netBalance[d.customerId] ?? 0) + d.total;
     }
 
-    // For each customer, subtract paid amounts
+    // Subtract payments for each customer
     final Set<String> customerIds = deliveries.map((d) => d.customerId).toSet();
     for (final cid in customerIds) {
       final pays = await getPaymentsByCustomer(cid);
       for (final p in pays) {
-        pending[cid] = (pending[cid] ?? 0) - p.amount;
+        netBalance[cid] = (netBalance[cid] ?? 0) - p.amount;
       }
     }
 
-    pending.updateAll((key, value) => value < 0 ? 0 : value);
+    // DON'T convert negative values to 0 - keep them as is
+    // Positive = customer owes money (pending)
+    // Negative = customer has paid in advance (credit/advance)
+    return netBalance;
+  }
+
+  // UPDATED METHOD: Only compute positive pending amounts (for old compatibility)
+  Future<Map<String, double>> computePendingByCustomer() async {
+    final netBalance = await computeNetBalanceByCustomer();
+    
+    // Convert negative values to 0 for "pending" view
+    final Map<String, double> pending = {};
+    netBalance.forEach((key, value) {
+      pending[key] = value < 0 ? 0 : value;
+    });
+    
     return pending;
   }
 
@@ -235,9 +249,11 @@ class PaymentsService {
   }
 
   bool _sameMinute(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day && a.hour == b.hour && a.minute == b.minute;
+      a.year == b.year && a.month == b.month && a.day == b.day && 
+      a.hour == b.hour && a.minute == b.minute;
 
-  String _minuteIso(DateTime dt) => DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute).toIso8601String();
+  String _minuteIso(DateTime dt) => 
+      DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute).toIso8601String();
 
   String _err(http.Response r) {
     try {

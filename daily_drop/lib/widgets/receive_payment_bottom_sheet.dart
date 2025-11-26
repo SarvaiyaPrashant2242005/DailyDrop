@@ -21,6 +21,10 @@ class _ReceivePaymentBottomSheetState extends State<ReceivePaymentBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final dateStr = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    
     return Container(
       padding: EdgeInsets.only(
         left: 20,
@@ -40,7 +44,13 @@ class _ReceivePaymentBottomSheetState extends State<ReceivePaymentBottomSheet> {
           children: [
             const Text('Receive Payment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            Text('Pending: ₹${widget.pendingAmount.toStringAsFixed(0)}', style: const TextStyle(color: Colors.grey)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Pending: ₹${widget.pendingAmount.toStringAsFixed(0)}', style: const TextStyle(color: Colors.grey)),
+                Text('$dateStr  $timeStr', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+              ],
+            ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _amountController,
