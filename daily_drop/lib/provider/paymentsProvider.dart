@@ -44,9 +44,11 @@ class DeliveriesNotifier extends StateNotifier<AsyncValue<List<Delivery>>> {
 }
 
 // Recent deliveries (for dashboard)
-final recentDeliveriesProvider = FutureProvider<List<Delivery>>((ref) async {
-  final service = ref.watch(paymentsServiceProvider);
-  return service.getRecentDeliveries(limit: 5);
+final recentDeliveriesProvider = Provider<AsyncValue<List<Delivery>>>((ref) {
+  final deliveriesAsync = ref.watch(deliveriesProvider);
+  return deliveriesAsync.whenData((deliveries) {
+    return deliveries.take(5).toList();
+  });
 });
 
 // Payment records state (we record payments but rarely list them all at once)

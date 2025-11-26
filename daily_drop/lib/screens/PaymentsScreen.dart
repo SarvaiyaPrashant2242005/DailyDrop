@@ -1,4 +1,3 @@
-import 'package:daily_drop/controller/payments_controller.dart';
 import 'package:daily_drop/model/customer_model.dart';
 import 'package:daily_drop/provider/customerProvider.dart';
 import 'package:daily_drop/provider/paymentsProvider.dart';
@@ -9,11 +8,25 @@ import 'package:daily_drop/widgets/payment_summary_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PaymentsScreen extends ConsumerWidget {
+class PaymentsScreen extends ConsumerStatefulWidget {
   const PaymentsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PaymentsScreen> createState() => _PaymentsScreenState();
+}
+
+class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final totalPendingAsync = ref.watch(totalPendingProvider);
     final customersAsync = ref.watch(customersProvider);
     final pendingMapAsync = ref.watch(pendingByCustomerProvider);
@@ -71,6 +84,40 @@ class PaymentsScreen extends ConsumerWidget {
                   error: (e, _) => Text('Error: $e'),
                 ),
                 const SizedBox(height: 20),
+                
+                // Search Bar
+                TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value.toLowerCase();
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Search customers...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                              });
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
                 const Text(
                   'Customer Payments',
                   style: TextStyle(
@@ -83,7 +130,14 @@ class PaymentsScreen extends ConsumerWidget {
                   data: (customers) {
                     return pendingMapAsync.when(
                       data: (map) {
-                        final items = customers
+                        // Filter customers based on search query
+                        var filteredCustomers = customers.where((customer) {
+                          return customer.name.toLowerCase().contains(_searchQuery) ||
+                              customer.address.toLowerCase().contains(_searchQuery) ||
+                              customer.phone.contains(_searchQuery);
+                        }).toList();
+
+                        final items = filteredCustomers
                             .map((c) => _CustomerPending(
                                   customer: c,
                                   pending: (map[c.id] ?? 0),
@@ -95,9 +149,19 @@ class PaymentsScreen extends ConsumerWidget {
                           return Padding(
                             padding: const EdgeInsets.only(top: 40),
                             child: Center(
-                              child: Text(
-                                'No customers',
-                                style: TextStyle(color: Colors.grey.shade600),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    _searchQuery.isEmpty ? Icons.people_outline : Icons.search_off,
+                                    size: 64,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    _searchQuery.isEmpty ? 'No customers' : 'No customers found',
+                                    style: TextStyle(color: Colors.grey.shade600),
+                                  ),
+                                ],
                               ),
                             ),
                           );
@@ -162,7 +226,7 @@ class _CustomerTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -189,7 +253,7 @@ class _CustomerTile extends StatelessWidget {
           children: [
             const Text('Pending', style: TextStyle(fontSize: 12, color: Colors.grey)),
             Text('₹${pending.toStringAsFixed(0)}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
