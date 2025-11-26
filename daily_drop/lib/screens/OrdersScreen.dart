@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import '../model/customer_model.dart';
 import '../provider/customerProvider.dart';
 import '../provider/paymentsProvider.dart';
-import 'package:daily_drop/widgets/loading.dart';
 
 
 class OrdersScreen extends ConsumerStatefulWidget {
@@ -237,8 +236,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                       },
                       orElse: () => null,
                     );
-                    final bool canUndo = latestToday != null &&
-                        DateTime.now().difference(latestToday.date) <= const Duration(minutes: 2);
+                    // Undo is always available for completed deliveries
+                    final bool canUndo = latestToday != null;
 
                     // Use expandable card for pending deliveries
                     if (_tabIndex == 0) {
@@ -585,7 +584,7 @@ class _CompletedExpandableCard extends StatefulWidget {
   final _CustomerDelivery item;
   final int Function(String, String, int) getQty;
   final bool canUndo;
-  final VoidCallback? onUndo;
+  final Future<void> Function()? onUndo;
 
   const _CompletedExpandableCard({
     required this.item,
@@ -600,6 +599,7 @@ class _CompletedExpandableCard extends StatefulWidget {
 
 class _CompletedExpandableCardState extends State<_CompletedExpandableCard> {
   bool _isExpanded = false;
+  bool _isUndoing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -745,22 +745,44 @@ class _CompletedExpandableCardState extends State<_CompletedExpandableCard> {
                       width: double.infinity,
                       height: 44,
                       child: ElevatedButton(
-                        onPressed: widget.onUndo,
+                        onPressed: _isUndoing ? null : () async {
+                          setState(() {
+                            _isUndoing = true;
+                          });
+                          if (widget.onUndo != null) {
+                            await widget.onUndo!();
+                          }
+                          if (mounted) {
+                            setState(() {
+                              _isUndoing = false;
+                            });
+                          }
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFEF4444),
+                          disabledBackgroundColor: Colors.grey.shade300,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           padding: EdgeInsets.zero,
                         ),
-                        child: const Text(
-                          'Undo Delivery',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        child: _isUndoing
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                'Undo Delivery',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                   ],
