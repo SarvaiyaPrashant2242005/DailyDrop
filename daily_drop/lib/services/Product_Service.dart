@@ -1,8 +1,10 @@
 // lib/services/Product_Service.dart
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:daily_drop/model/Product_model.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProductService {
@@ -18,6 +20,11 @@ class ProductService {
     };
   }
 
+  Future<String?> _getToken() async {
+    final sp = await SharedPreferences.getInstance();
+    return sp.getString('access_token');
+  }
+
   Future<List<Product>> getAllProducts() async {
     final uri = Uri.parse('$baseUrl/api/products');
     final res = await http.get(uri, headers: await _headers());
@@ -28,15 +35,50 @@ class ProductService {
     throw Exception(_readError(res));
   }
 
-  Future<void> addProduct(Product product) async {
+  Future<void> addProduct(Product product, {File? imageFile}) async {
     final uri = Uri.parse('$baseUrl/api/products');
-    final res = await http.post(
-      uri,
-      headers: await _headers(),
-      body: jsonEncode(product.toServerJson()),
-    );
-    if (res.statusCode != 201) {
-      throw Exception(_readError(res));
+    final token = await _getToken();
+
+    if (imageFile != null) {
+      // Use multipart request for image upload
+      final request = http.MultipartRequest('POST', uri);
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      // Add product fields
+      request.fields['product_name'] = product.name;
+      request.fields['product_price'] = product.defaultPrice.toString();
+      request.fields['product_unit'] = product.unit;
+
+      // Add image file
+      final imageStream = http.ByteStream(imageFile.openRead());
+      final imageLength = await imageFile.length();
+      final multipartFile = http.MultipartFile(
+        'image',
+        imageStream,
+        imageLength,
+        filename: imageFile.path.split('/').last,
+        contentType: MediaType('image', 'jpeg'),
+      );
+      request.files.add(multipartFile);
+
+      final streamedResponse = await request.send();
+      final res = await http.Response.fromStream(streamedResponse);
+
+      if (res.statusCode != 201) {
+        throw Exception(_readError(res));
+      }
+    } else {
+      // Regular JSON request without image
+      final res = await http.post(
+        uri,
+        headers: await _headers(),
+        body: jsonEncode(product.toServerJson()),
+      );
+      if (res.statusCode != 201) {
+        throw Exception(_readError(res));
+      }
     }
   }
 
@@ -48,15 +90,50 @@ class ProductService {
     }
   }
 
-  Future<void> updateProduct(Product product) async {
+  Future<void> updateProduct(Product product, {File? imageFile}) async {
     final uri = Uri.parse('$baseUrl/api/products/${product.id}');
-    final res = await http.put(
-      uri,
-      headers: await _headers(),
-      body: jsonEncode(product.toServerJson()),
-    );
-    if (res.statusCode != 200) {
-      throw Exception(_readError(res));
+    final token = await _getToken();
+
+    if (imageFile != null) {
+      // Use multipart request for image upload
+      final request = http.MultipartRequest('PUT', uri);
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      // Add product fields
+      request.fields['product_name'] = product.name;
+      request.fields['product_price'] = product.defaultPrice.toString();
+      request.fields['product_unit'] = product.unit;
+
+      // Add image file
+      final imageStream = http.ByteStream(imageFile.openRead());
+      final imageLength = await imageFile.length();
+      final multipartFile = http.MultipartFile(
+        'image',
+        imageStream,
+        imageLength,
+        filename: imageFile.path.split('/').last,
+        contentType: MediaType('image', 'jpeg'),
+      );
+      request.files.add(multipartFile);
+
+      final streamedResponse = await request.send();
+      final res = await http.Response.fromStream(streamedResponse);
+
+      if (res.statusCode != 200) {
+        throw Exception(_readError(res));
+      }
+    } else {
+      // Regular JSON request without image
+      final res = await http.put(
+        uri,
+        headers: await _headers(),
+        body: jsonEncode(product.toServerJson()),
+      );
+      if (res.statusCode != 200) {
+        throw Exception(_readError(res));
+      }
     }
   }
 

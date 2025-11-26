@@ -1,9 +1,11 @@
 // lib/controller/product_controller.dart
 
+import 'dart:io';
 import 'package:daily_drop/model/Product_model.dart';
 import 'package:daily_drop/provider/productProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProductController {
   final WidgetRef ref;
@@ -15,8 +17,29 @@ class ProductController {
     required double price,
     required String unit,
     required BuildContext context,
+    File? imageFile,
   }) async {
     try {
+      // Check if product with same name already exists
+      final productsAsync = ref.read(productsProvider);
+      final existingProducts = productsAsync.value ?? [];
+      final duplicateName = existingProducts.any(
+        (p) => p.name.trim().toLowerCase() == name.trim().toLowerCase(),
+      );
+
+      if (duplicateName) {
+        if (context.mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Product "$name" already exists'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       final product = Product(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: name,
@@ -24,7 +47,7 @@ class ProductController {
         unit: unit,
       );
 
-      await ref.read(productsProvider.notifier).addProduct(product);
+      await ref.read(productsProvider.notifier).addProduct(product, imageFile: imageFile);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -34,6 +57,7 @@ class ProductController {
       }
     } catch (e) {
       if (context.mounted) {
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error adding product: $e')),
         );
@@ -65,8 +89,29 @@ class ProductController {
     required double price,
     required String unit,
     required BuildContext context,
+    File? imageFile,
   }) async {
     try {
+      // Check if another product with same name already exists (excluding current product)
+      final productsAsync = ref.read(productsProvider);
+      final existingProducts = productsAsync.value ?? [];
+      final duplicateName = existingProducts.any(
+        (p) => p.id != id && p.name.trim().toLowerCase() == name.trim().toLowerCase(),
+      );
+
+      if (duplicateName) {
+        if (context.mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Product "$name" already exists'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       final product = Product(
         id: id,
         name: name,
@@ -74,7 +119,7 @@ class ProductController {
         unit: unit,
       );
 
-      await ref.read(productsProvider.notifier).updateProduct(product);
+      await ref.read(productsProvider.notifier).updateProduct(product, imageFile: imageFile);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -84,6 +129,7 @@ class ProductController {
       }
     } catch (e) {
       if (context.mounted) {
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error updating product: $e')),
         );
@@ -125,6 +171,8 @@ class _EditProductBottomSheetState extends ConsumerState<EditProductBottomSheet>
   late final TextEditingController _nameController;
   late final TextEditingController _priceController;
   late final TextEditingController _unitController;
+  File? _imageFile;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -142,6 +190,20 @@ class _EditProductBottomSheetState extends ConsumerState<EditProductBottomSheet>
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (image != null) {
+      setState(() {
+        _imageFile = File(image.path);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -152,122 +214,179 @@ class _EditProductBottomSheetState extends ConsumerState<EditProductBottomSheet>
           topRight: Radius.circular(25),
         ),
       ),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 20,
-        right: 20,
-        top: 20,
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            left: 20,
+            right: 20,
+            top: 20,
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Edit Product',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Edit Product',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const Text('Product Name *',
-                style: TextStyle(fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                hintText: 'e.g., Water Bottle, Milk',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter product name';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            const Text('Default Price (₹) *',
-                style: TextStyle(fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _priceController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: '20',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter price';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter valid price';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            const Text('Unit *', style: TextStyle(fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _unitController,
-              decoration: InputDecoration(
-                hintText: 'e.g., bottle, 500ml, 1L',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter unit';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 25),
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    final controller = ProductController(ref);
-                    controller.updateProduct(
-                      id: widget.product.id,
-                      name: _nameController.text,
-                      price: double.parse(_priceController.text),
-                      unit: _unitController.text,
-                      context: context,
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6A5BFF),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 20),
+                
+                // Image Picker
+                const Text('Product Image', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey.shade50,
+                    ),
+                    child: _imageFile != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(_imageFile!, fit: BoxFit.cover),
+                          )
+                        : widget.product.imageUrl != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  'https://dailydrop-3d5q.onrender.com${widget.product.imageUrl}',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.add_photo_alternate, size: 40, color: Colors.grey),
+                                          SizedBox(height: 8),
+                                          Text('Tap to select image', style: TextStyle(color: Colors.grey)),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              )
+                            : const Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_photo_alternate, size: 40, color: Colors.grey),
+                                    SizedBox(height: 8),
+                                    Text('Tap to select image', style: TextStyle(color: Colors.grey)),
+                                  ],
+                                ),
+                              ),
                   ),
                 ),
-                child: const Text(
-                  'Update Product',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                const SizedBox(height: 20),
+                
+                const Text('Product Name *',
+                    style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    hintText: 'e.g., Water Bottle, Milk',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter product name';
+                    }
+                    return null;
+                  },
                 ),
-              ),
+                const SizedBox(height: 20),
+                const Text('Default Price (₹) *',
+                    style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _priceController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    hintText: '20',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter price';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter valid price';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                const Text('Unit *', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _unitController,
+                  decoration: InputDecoration(
+                    hintText: 'e.g., bottle, 500ml, 1L',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter unit';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 25),
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        final controller = ProductController(ref);
+                        controller.updateProduct(
+                          id: widget.product.id,
+                          name: _nameController.text,
+                          price: double.parse(_priceController.text),
+                          unit: _unitController.text,
+                          context: context,
+                          imageFile: _imageFile,
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6A5BFF),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Update Product',
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
             ),
-            const SizedBox(height: 20),
-          ],
+          ),
         ),
       ),
     );
@@ -279,14 +398,18 @@ class AddProductBottomSheet extends ConsumerStatefulWidget {
   const AddProductBottomSheet({super.key});
 
   @override
-  ConsumerState<AddProductBottomSheet> createState() => _AddProductBottomSheetState();
+  ConsumerState<AddProductBottomSheet> createState() =>
+      _AddProductBottomSheetState();
 }
 
-class _AddProductBottomSheetState extends ConsumerState<AddProductBottomSheet> {
+class _AddProductBottomSheetState
+    extends ConsumerState<AddProductBottomSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
   final _unitController = TextEditingController();
+  File? _imageFile;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void dispose() {
@@ -294,6 +417,20 @@ class _AddProductBottomSheetState extends ConsumerState<AddProductBottomSheet> {
     _priceController.dispose();
     _unitController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (image != null) {
+      setState(() {
+        _imageFile = File(image.path);
+      });
+    }
   }
 
   @override
@@ -306,121 +443,180 @@ class _AddProductBottomSheetState extends ConsumerState<AddProductBottomSheet> {
           topRight: Radius.circular(25),
         ),
       ),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 20,
-        right: 20,
-        top: 20,
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            left: 20,
+            right: 20,
+            top: 20,
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Add Product',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const Text('Product Name *',
-                style: TextStyle(fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                hintText: 'e.g., Water Bottle, Milk',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter product name';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            const Text('Default Price (₹) *',
-                style: TextStyle(fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _priceController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: '20',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter price';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter valid price';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            const Text('Unit *', style: TextStyle(fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _unitController,
-              decoration: InputDecoration(
-                hintText: 'e.g., bottle, 500ml, 1L',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter unit';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 25),
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    final controller = ProductController(ref);
-                    controller.addProduct(
-                      name: _nameController.text,
-                      price: double.parse(_priceController.text),
-                      unit: _unitController.text,
-                      context: context,
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6A5BFF),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                // HEADER
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Add Product',
+                      style: TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ), 
+
+                const SizedBox(height: 20),
+
+                // IMAGE PICKER
+                const Text('Product Image', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey.shade50,
+                    ),
+                    child: _imageFile != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(_imageFile!, fit: BoxFit.cover),
+                          )
+                        : const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_photo_alternate, size: 40, color: Colors.grey),
+                                SizedBox(height: 8),
+                                Text('Tap to select image', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
                   ),
                 ),
-                child: const Text(
-                  'Add Product',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+
+                const SizedBox(height: 20),
+
+                // PRODUCT NAME
+                const Text('Product Name *',
+                    style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+
+                TextFormField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    hintText: 'e.g., Water Bottle, Milk',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    hintStyle: const TextStyle(
+                      fontWeight: FontWeight.w100,
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter product name';
+                    }
+                    return null;
+                  },
                 ),
-              ),
+
+                const SizedBox(height: 20),
+
+                // PRICE FIELD
+                const Text('Default Price (₹) *',
+                    style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+
+                TextFormField(
+                  controller: _priceController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    hintText: '20',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter price';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter valid price';
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                // UNIT FIELD
+                const Text('Unit *',
+                    style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+
+                TextFormField(
+                  controller: _unitController,
+                  decoration: InputDecoration(
+                    hintText: 'e.g., bottle, 500ml, 1L',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter unit';
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 25),
+
+                // ADD BUTTON
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        final controller = ProductController(ref);
+                        controller.addProduct(
+                          name: _nameController.text,
+                          price: double.parse(_priceController.text),
+                          unit: _unitController.text,
+                          context: context,
+                          imageFile: _imageFile,
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6A5BFF),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Add Product',
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+              ],
             ),
-            const SizedBox(height: 20),
-          ],
+          ),
         ),
       ),
     );

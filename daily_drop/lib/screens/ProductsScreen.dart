@@ -8,11 +8,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../provider/productProvider.dart';
 
 
-class ProductsScreen extends ConsumerWidget {
+class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProductsScreen> createState() => _ProductsScreenState();
+}
+
+class _ProductsScreenState extends ConsumerState<ProductsScreen> {
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final productsAsync = ref.watch(productsProvider);
     final controller = ProductController(ref);
 
@@ -44,51 +59,108 @@ class ProductsScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Products',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
+                    if (!_isSearching)
+                      const Text(
+                        'Products',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
+                    if (_isSearching)
+                      Expanded(
+                        child: Container(
+                          height: 45,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            autofocus: true,
+                            decoration: InputDecoration(
+                              hintText: 'Search products...',
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () {
+                                  setState(() {
+                                    _isSearching = false;
+                                    _searchController.clear();
+                                    _searchQuery = '';
+                                  });
+                                },
+                              ),
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                _searchQuery = value.toLowerCase();
+                              });
+                            },
+                          ),
+                        ),
                       ),
-                      child: IconButton(
-                        onPressed: () => controller.showAddProductDialog(context),
-                        icon: const Icon(Icons.add, size: 28),
-                        color: const Color(0xFF8B5CF6),
+                    if (!_isSearching)
+                      Row(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _isSearching = true;
+                                });
+                              },
+                              icon: const Icon(Icons.search, size: 24),
+                              color: const Color(0xFF8B5CF6),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: IconButton(
+                              onPressed: () => controller.showAddProductDialog(context),
+                              icon: const Icon(Icons.add, size: 28),
+                              color: const Color(0xFF8B5CF6),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                productsAsync.when(
-                  data: (products) => Text(
-                    '${products.length} Total Products',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 16,
+                if (!_isSearching)
+                  productsAsync.when(
+                    data: (products) => Text(
+                      '${products.length} Total Products',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 16,
+                      ),
+                    ),
+                    loading: () => Text(
+                      'Loading...',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 16,
+                      ),
+                    ),
+                    error: (_, __) => Text(
+                      'Error loading products',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 16,
+                      ),
                     ),
                   ),
-                  loading: () => Text(
-                    'Loading...',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 16,
-                    ),
-                  ),
-                  error: (_, __) => Text(
-                    'Error loading products',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -97,6 +169,14 @@ class ProductsScreen extends ConsumerWidget {
           Expanded(
             child: productsAsync.when(
               data: (products) {
+                // Filter products based on search query
+                final filteredProducts = _searchQuery.isEmpty
+                    ? products
+                    : products.where((product) {
+                        return product.name.toLowerCase().contains(_searchQuery) ||
+                               product.unit.toLowerCase().contains(_searchQuery);
+                      }).toList();
+
                 if (products.isEmpty) {
                   return Center(
                     child: Column(
@@ -128,11 +208,42 @@ class ProductsScreen extends ConsumerWidget {
                   );
                 }
 
+                if (filteredProducts.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 80,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No products found',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Try a different search term',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 return ListView.builder(
                   padding: const EdgeInsets.only(top: 16, bottom: 16),
-                  itemCount: products.length,
+                  itemCount: filteredProducts.length,
                   itemBuilder: (context, index) {
-                    final product = products[index];
+                    final product = filteredProducts[index];
                     return ProductCard(
                       product: product,
                       onTap: () {
@@ -173,7 +284,7 @@ class ProductsScreen extends ConsumerWidget {
                 );
               },
               loading: () => const Center(
-                child: const LoadingOverlay(),
+                child: LoadingOverlay(),
               ),
               error: (error, stack) => Center(
                 child: Column(

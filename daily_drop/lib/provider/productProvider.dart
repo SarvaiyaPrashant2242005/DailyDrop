@@ -33,9 +33,9 @@ Future<void> loadProducts() async {
   }
 }
 
-  Future<void> addProduct(Product product) async {
+  Future<void> addProduct(Product product, {dynamic imageFile}) async {
     try {
-      await _service.addProduct(product);
+      await _service.addProduct(product, imageFile: imageFile);
       await loadProducts();
     } catch (e) {
       rethrow;
@@ -51,9 +51,9 @@ Future<void> loadProducts() async {
     }
   }
 
-  Future<void> updateProduct(Product product) async {
+  Future<void> updateProduct(Product product, {dynamic imageFile}) async {
     try {
-      await _service.updateProduct(product);
+      await _service.updateProduct(product, imageFile: imageFile);
       await loadProducts();
     } catch (e) {
       rethrow;
