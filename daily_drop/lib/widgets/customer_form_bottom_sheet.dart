@@ -2,7 +2,6 @@
 
 import 'package:daily_drop/controller/customer_controller.dart';
 import 'package:daily_drop/model/Product_model.dart';
-import 'package:daily_drop/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../model/customer_model.dart';
@@ -52,17 +51,211 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _ProductSearchBottomSheet(
+      builder: (context) => _ProductSelectionWithCheckboxBottomSheet(
         products: allProducts,
-        onProductSelected: (product) {
-          _showProductConfigDialog(product);
+        alreadySelectedProductIds: _selectedProducts.map((p) => p.productId).toList(),
+        onProductsSelected: (selectedProducts) {
+          _showBulkQuantityEditor(selectedProducts);
         },
       ),
     );
   }
 
-  void _showProductConfigDialog(Product product) {
-    int quantity = 1;
+  void _showBulkQuantityEditor(List<Product> selectedProducts) {
+    // Create a map to store quantities for each product
+    Map<String, int> quantities = {};
+    for (var product in selectedProducts) {
+      // Check if product already exists in _selectedProducts
+      final existing = _selectedProducts.firstWhere(
+        (p) => p.productId == product.id,
+        orElse: () => CustomerProduct(
+          productId: '',
+          productName: '',
+          quantity: 1,
+          price: 0,
+          unit: '',
+          frequency: DeliveryFrequency.everyday,
+        ),
+      );
+      quantities[product.id] = existing.productId.isNotEmpty ? existing.quantity : 1;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Set Quantities',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Set quantity for each product',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: selectedProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = selectedProducts[index];
+                        final quantity = quantities[product.id] ?? 1;
+                        
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      product.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '₹${product.defaultPrice.toStringAsFixed(0)} per ${product.unit}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    onPressed: () {
+                                      if (quantity > 1) {
+                                        setSheetState(() {
+                                          quantities[product.id] = quantity - 1;
+                                        });
+                                      }
+                                    },
+                                    icon: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.grey.shade300),
+                                      ),
+                                      child: const Icon(Icons.remove, size: 20),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF4C8CFF).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '$quantity',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF4C8CFF),
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    onPressed: () {
+                                      setSheetState(() {
+                                        quantities[product.id] = quantity + 1;
+                                      });
+                                    },
+                                    icon: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF4C8CFF),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(Icons.add, size: 20, color: Colors.white),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showBulkFrequencySelector(selectedProducts, quantities);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4C8CFF),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Next: Set Frequency',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showBulkFrequencySelector(List<Product> selectedProducts, Map<String, int> quantities) {
     DeliveryFrequency frequency = DeliveryFrequency.everyday;
     AlternateDayStart alternateDayStart = AlternateDayStart.today;
     WeekDay weeklyDay = WeekDay.monday;
@@ -74,54 +267,28 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: StatefulBuilder(
-            builder: (context, setSheetState) {
-              return SingleChildScrollView(
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: SingleChildScrollView(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4C8CFF).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.shopping_bag_outlined,
-                            color: Color(0xFF4C8CFF),
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product.name,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                '₹${product.defaultPrice.toStringAsFixed(0)} per ${product.unit}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
+                        const Text(
+                          'Set Frequency',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         IconButton(
@@ -130,75 +297,16 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    
-                    // Quantity selector
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Quantity',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              IconButton(
-                                onPressed: () {
-                                  if (quantity > 1) setSheetState(() => quantity--);
-                                },
-                                icon: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.grey.shade300),
-                                  ),
-                                  child: const Icon(Icons.remove, size: 20),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF4C8CFF).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '$quantity',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF4C8CFF),
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () => setSheetState(() => quantity++),
-                                icon: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF4C8CFF),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(Icons.add, size: 20, color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'This frequency will apply to all ${selectedProducts.length} selected products',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     
-                    // Frequency dropdown
                     const Text(
                       'Delivery Frequency',
                       style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
@@ -229,7 +337,6 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                     ),
                     const SizedBox(height: 16),
                     
-                    // Alternate day start option
                     if (frequency == DeliveryFrequency.oneDayOnOneDayOff) ...[
                       const Text(
                         'Start From',
@@ -258,7 +365,6 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                       const SizedBox(height: 16),
                     ],
                     
-                    // Weekly day option
                     if (frequency == DeliveryFrequency.weekly) ...[
                       const Text(
                         'Delivery Day',
@@ -287,112 +393,107 @@ class _CustomerFormBottomSheetState extends ConsumerState<CustomerFormBottomShee
                       const SizedBox(height: 16),
                     ],
 
-                    // Monthly date picker with calendar view
-                   // In _showProductConfigDialog method, replace the monthly section with this:
-
-// Monthly date picker as a button that opens popup
-if (frequency == DeliveryFrequency.monthly) ...[
-  const Text(
-    'Delivery Date',
-    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-  ),
-  const SizedBox(height: 8),
-  InkWell(
-    onTap: () {
-      showDialog(
-        context: context,
-        builder: (dialogContext) {
-          int tempMonthlyDate = monthlyDate;
-          return AlertDialog(
-            title: const Text(
-              'Select Day of Month',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: GridView.builder(
-                shrinkWrap: true,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 7,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                ),
-                itemCount: 31,
-                itemBuilder: (context, index) {
-                  final day = index + 1;
-                  final isSelected = tempMonthlyDate == day;
-                  return InkWell(
-                    onTap: () {
-                      setSheetState(() => monthlyDate = day);
-                      Navigator.pop(dialogContext);
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isSelected 
-                            ? const Color(0xFF4C8CFF) 
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isSelected 
-                              ? const Color(0xFF4C8CFF)
-                              : Colors.grey.shade300,
-                          width: isSelected ? 2 : 1,
+                    if (frequency == DeliveryFrequency.monthly) ...[
+                      const Text(
+                        'Delivery Date',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (dialogContext) {
+                              return AlertDialog(
+                                title: const Text(
+                                  'Select Day of Month',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                content: SizedBox(
+                                  width: double.maxFinite,
+                                  child: GridView.builder(
+                                    shrinkWrap: true,
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 7,
+                                      crossAxisSpacing: 8,
+                                      mainAxisSpacing: 8,
+                                    ),
+                                    itemCount: 31,
+                                    itemBuilder: (context, index) {
+                                      final day = index + 1;
+                                      final isSelected = monthlyDate == day;
+                                      return InkWell(
+                                        onTap: () {
+                                          setSheetState(() => monthlyDate = day);
+                                          Navigator.pop(dialogContext);
+                                        },
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: isSelected 
+                                                ? const Color(0xFF4C8CFF) 
+                                                : Colors.white,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: isSelected 
+                                                  ? const Color(0xFF4C8CFF)
+                                                  : Colors.grey.shade300,
+                                              width: isSelected ? 2 : 1,
+                                            ),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            '$day',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                              color: isSelected ? Colors.white : Colors.grey.shade800,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(dialogContext),
+                                    child: const Text('Cancel'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Day $monthlyDate of every month',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const Icon(
+                                Icons.calendar_today,
+                                color: Color(0xFF4C8CFF),
+                                size: 20,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '$day',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? Colors.white : Colors.grey.shade800,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
-              ),
-            ],
-          );
-        },
-      );
-    },
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Day $monthlyDate of every month',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const Icon(
-            Icons.calendar_today,
-            color: Color(0xFF4C8CFF),
-            size: 20,
-          ),
-        ],
-      ),
-    ),
-  ),
-  const SizedBox(height: 16),
-],
-                    // Custom days selector
+                      const SizedBox(height: 16),
+                    ],
+                    
                     if (frequency == DeliveryFrequency.custom) ...[
                       const Text(
                         'Select Delivery Days',
@@ -460,40 +561,23 @@ if (frequency == DeliveryFrequency.monthly) ...[
                       height: 50,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Validate custom days selection
                           if (frequency == DeliveryFrequency.custom && customWeekDays.isEmpty) {
                             showTopSnackBar(
-  context,
-  'Please add at least one product',
-  isError: true,
-);
+                              context,
+                              'Please select at least one delivery day',
+                              isError: true,
+                            );
                             return;
                           }
 
                           setState(() {
-                            final existingIndex = _selectedProducts.indexWhere(
-                              (p) => p.productId == product.id
-                            );
-                            
-                            if (existingIndex != -1) {
-                              _selectedProducts[existingIndex] = _selectedProducts[existingIndex].copyWith(
-                                quantity: quantity,
-                                frequency: frequency,
-                                alternateDayStart: frequency == DeliveryFrequency.oneDayOnOneDayOff 
-                                    ? alternateDayStart 
-                                    : null,
-                                weeklyDay: frequency == DeliveryFrequency.weekly 
-                                    ? weeklyDay 
-                                    : null,
-                                monthlyDate: frequency == DeliveryFrequency.monthly
-                                    ? monthlyDate
-                                    : null,
-                                customWeekDays: frequency == DeliveryFrequency.custom
-                                    ? List.from(customWeekDays)
-                                    : null,
+                            for (var product in selectedProducts) {
+                              final quantity = quantities[product.id] ?? 1;
+                              final existingIndex = _selectedProducts.indexWhere(
+                                (p) => p.productId == product.id
                               );
-                            } else {
-                              _selectedProducts.add(CustomerProduct(
+                              
+                              final customerProduct = CustomerProduct(
                                 productId: product.id,
                                 productName: product.name,
                                 quantity: quantity,
@@ -512,7 +596,13 @@ if (frequency == DeliveryFrequency.monthly) ...[
                                 customWeekDays: frequency == DeliveryFrequency.custom
                                     ? List.from(customWeekDays)
                                     : null,
-                              ));
+                              );
+
+                              if (existingIndex != -1) {
+                                _selectedProducts[existingIndex] = customerProduct;
+                              } else {
+                                _selectedProducts.add(customerProduct);
+                              }
                             }
                           });
                           Navigator.pop(context);
@@ -524,9 +614,9 @@ if (frequency == DeliveryFrequency.monthly) ...[
                           ),
                           elevation: 0,
                         ),
-                        child: const Text(
-                          'Add Product',
-                          style: TextStyle(
+                        child: Text(
+                          'Add ${selectedProducts.length} Product${selectedProducts.length > 1 ? 's' : ''}',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -536,9 +626,9 @@ if (frequency == DeliveryFrequency.monthly) ...[
                     ),
                   ],
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -551,7 +641,7 @@ if (frequency == DeliveryFrequency.monthly) ...[
   }
 
   void _editSelectedProduct(int index) {
-    final productsAsync = ref.read(productsProvider);
+    final productsAsync = ref.watch(productsProvider);
     productsAsync.whenData((products) {
       final existing = _selectedProducts[index];
       final product = products.firstWhere((p) => p.id == existing.productId);
@@ -1348,28 +1438,32 @@ if (frequency == DeliveryFrequency.monthly) ...[
   }
 }
 
-// Product Search Bottom Sheet Widget
-class _ProductSearchBottomSheet extends StatefulWidget {
+// Product Selection with Checkbox Bottom Sheet Widget
+class _ProductSelectionWithCheckboxBottomSheet extends StatefulWidget {
   final List<Product> products;
-  final Function(Product) onProductSelected;
+  final List<String> alreadySelectedProductIds;
+  final Function(List<Product>) onProductsSelected;
 
-  const _ProductSearchBottomSheet({
+  const _ProductSelectionWithCheckboxBottomSheet({
     required this.products,
-    required this.onProductSelected,
+    required this.alreadySelectedProductIds,
+    required this.onProductsSelected,
   });
 
   @override
-  State<_ProductSearchBottomSheet> createState() => _ProductSearchBottomSheetState();
+  State<_ProductSelectionWithCheckboxBottomSheet> createState() => _ProductSelectionWithCheckboxBottomSheetState();
 }
 
-class _ProductSearchBottomSheetState extends State<_ProductSearchBottomSheet> {
+class _ProductSelectionWithCheckboxBottomSheetState extends State<_ProductSelectionWithCheckboxBottomSheet> {
   final TextEditingController _searchController = TextEditingController();
   List<Product> _filteredProducts = [];
+  Set<String> _selectedProductIds = {};
 
   @override
   void initState() {
     super.initState();
     _filteredProducts = widget.products;
+    _selectedProductIds = Set.from(widget.alreadySelectedProductIds);
   }
 
   @override
@@ -1391,10 +1485,24 @@ class _ProductSearchBottomSheetState extends State<_ProductSearchBottomSheet> {
     });
   }
 
+  void _toggleProduct(String productId) {
+    setState(() {
+      if (_selectedProductIds.contains(productId)) {
+        _selectedProductIds.remove(productId);
+      } else {
+        _selectedProductIds.add(productId);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final newlySelectedCount = _selectedProductIds.where(
+      (id) => !widget.alreadySelectedProductIds.contains(id)
+    ).length;
+
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
+      height: MediaQuery.of(context).size.height * 0.85,
       margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1412,14 +1520,14 @@ class _ProductSearchBottomSheetState extends State<_ProductSearchBottomSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Select Product',
+                        'Select Products',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        '${widget.products.length} products available',
+                        '${_selectedProductIds.length} selected • ${widget.products.length} available',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade600,
@@ -1506,12 +1614,18 @@ class _ProductSearchBottomSheetState extends State<_ProductSearchBottomSheet> {
                     itemCount: _filteredProducts.length,
                     itemBuilder: (context, index) {
                       final product = _filteredProducts[index];
+                      final isSelected = _selectedProductIds.contains(product.id);
+                      final isAlreadyAdded = widget.alreadySelectedProductIds.contains(product.id);
+                      
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: isSelected ? const Color(0xFF4C8CFF).withOpacity(0.05) : Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
+                          border: Border.all(
+                            color: isSelected ? const Color(0xFF4C8CFF) : Colors.grey.shade200,
+                            width: isSelected ? 2 : 1,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.grey.shade100,
@@ -1521,15 +1635,32 @@ class _ProductSearchBottomSheetState extends State<_ProductSearchBottomSheet> {
                           ],
                         ),
                         child: InkWell(
-                          onTap: () {
-                            Navigator.pop(context);
-                            widget.onProductSelected(product);
-                          },
+                          onTap: () => _toggleProduct(product.id),
                           borderRadius: BorderRadius.circular(12),
                           child: Padding(
                             padding: const EdgeInsets.all(16),
                             child: Row(
                               children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? const Color(0xFF4C8CFF) : Colors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: isSelected ? const Color(0xFF4C8CFF) : Colors.grey.shade400,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: isSelected
+                                      ? const Icon(
+                                          Icons.check,
+                                          size: 16,
+                                          color: Colors.white,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 12),
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
@@ -1547,12 +1678,34 @@ class _ProductSearchBottomSheetState extends State<_ProductSearchBottomSheet> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        product.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              product.name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ),
+                                          if (isAlreadyAdded)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.shade100,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                'Added',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.green.shade700,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
@@ -1565,18 +1718,6 @@ class _ProductSearchBottomSheetState extends State<_ProductSearchBottomSheet> {
                                     ],
                                   ),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF4C8CFF),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Icons.arrow_forward,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -1585,6 +1726,49 @@ class _ProductSearchBottomSheetState extends State<_ProductSearchBottomSheet> {
                     },
                   ),
           ),
+
+          // Bottom Action Button
+          if (newlySelectedCount > 0)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.shade300,
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final selectedProducts = widget.products
+                        .where((p) => _selectedProductIds.contains(p.id))
+                        .toList();
+                    Navigator.pop(context);
+                    widget.onProductsSelected(selectedProducts);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4C8CFF),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Continue with $newlySelectedCount Product${newlySelectedCount > 1 ? 's' : ''}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -1598,8 +1782,6 @@ void showTopSnackBar(
   bool isError = false,
 }) {
   final overlay = Overlay.of(context);
-  if (overlay == null) return;
-
   final color = isError ? const Color(0xFFE11D48) : const Color(0xFF16A34A);
 
   final entry = OverlayEntry(

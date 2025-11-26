@@ -56,15 +56,17 @@ class CustomerController {
       await ref.read(customersProvider.notifier).updateCustomer(customer);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Customer updated successfully')),
+        showTopSnackBar(
+          context,
+          'Customer updated successfully',
         );
-        Navigator.pop(context);
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating customer: $e')),
+        showTopSnackBar(
+          context,
+          'Error updating customer: $e',
+          isError: true,
         );
       }
     }

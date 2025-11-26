@@ -1,6 +1,10 @@
 // lib/model/customer_model.dart
 
+// Sentinel value for copyWith to distinguish between null and not provided
+const _undefined = Object();
+
 class CustomerProduct {
+  final String? id; // customer_product record id from server
   final String productId;
   final String productName;
   final int quantity;
@@ -13,6 +17,7 @@ class CustomerProduct {
   final List<WeekDay>? customWeekDays; // For custom frequency
 
   CustomerProduct({
+    this.id,
     required this.productId,
     required this.productName,
     required this.quantity,
@@ -26,33 +31,44 @@ class CustomerProduct {
   });
 
   CustomerProduct copyWith({
+    Object? id = _undefined,
     String? productId,
     String? productName,
     int? quantity,
     double? price,
     String? unit,
     DeliveryFrequency? frequency,
-    AlternateDayStart? alternateDayStart,
-    WeekDay? weeklyDay,
-    int? monthlyDate,
-    List<WeekDay>? customWeekDays,
+    Object? alternateDayStart = _undefined,
+    Object? weeklyDay = _undefined,
+    Object? monthlyDate = _undefined,
+    Object? customWeekDays = _undefined,
   }) {
     return CustomerProduct(
+      id: id == _undefined ? this.id : id as String?,
       productId: productId ?? this.productId,
       productName: productName ?? this.productName,
       quantity: quantity ?? this.quantity,
       price: price ?? this.price,
       unit: unit ?? this.unit,
       frequency: frequency ?? this.frequency,
-      alternateDayStart: alternateDayStart ?? this.alternateDayStart,
-      weeklyDay: weeklyDay ?? this.weeklyDay,
-      monthlyDate: monthlyDate ?? this.monthlyDate,
-      customWeekDays: customWeekDays ?? this.customWeekDays,
+      alternateDayStart: alternateDayStart == _undefined 
+          ? this.alternateDayStart 
+          : alternateDayStart as AlternateDayStart?,
+      weeklyDay: weeklyDay == _undefined 
+          ? this.weeklyDay 
+          : weeklyDay as WeekDay?,
+      monthlyDate: monthlyDate == _undefined 
+          ? this.monthlyDate 
+          : monthlyDate as int?,
+      customWeekDays: customWeekDays == _undefined 
+          ? this.customWeekDays 
+          : customWeekDays as List<WeekDay>?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'productId': productId,
       'productName': productName,
       'quantity': quantity,
@@ -68,6 +84,7 @@ class CustomerProduct {
 
   factory CustomerProduct.fromJson(Map<String, dynamic> json) {
     return CustomerProduct(
+      id: json['id'] as String?,
       productId: json['productId'] as String,
       productName: json['productName'] as String,
       quantity: json['quantity'] as int,

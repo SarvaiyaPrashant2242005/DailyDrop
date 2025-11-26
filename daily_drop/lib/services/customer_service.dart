@@ -96,6 +96,7 @@ class CustomerService {
   }
 
   Future<void> updateCustomer(Customer c) async {
+    // Update basic customer info
     final body = {
       'customer_name': c.name,
       'customer_address': c.address,
@@ -107,7 +108,67 @@ class CustomerService {
       body: jsonEncode(body),
     );
     if (res.statusCode != 200) throw Exception(_err(res));
-    // Note: Updating assignments: call additional endpoints as needed
+
+    // Sync product assignments
+    await syncCustomerProducts(c.id, c.products);
+  }
+
+  Future<void> syncCustomerProducts(String customerId, List<CustomerProduct> newProducts) async {
+    // Get existing products from server
+    final existingProducts = await getCustomerProducts(customerId);
+    
+    // Create a map of existing products by their customer_product id
+    final existingById = {for (var p in existingProducts) if (p.id != null) p.id!: p};
+    
+    // Create a set of customer_product ids that should remain
+    final idsToKeep = newProducts.where((p) => p.id != null).map((p) => p.id!).toSet();
+    
+    // Delete products that are no longer in the list
+    for (var existingId in existingById.keys) {
+      if (!idsToKeep.contains(existingId)) {
+        await deleteCustomerProduct(existingId);
+      }
+    }
+    
+    // Update or add products
+    for (var product in newProducts) {
+      if (product.id != null && existingById.containsKey(product.id)) {
+        // Update existing product
+        await updateCustomerProduct(product);
+      } else {
+        // Add new product (no id means it's new)
+        await addCustomerProduct(customerId, product);
+      }
+    }
+  }
+
+  Future<void> updateCustomerProduct(CustomerProduct p) async {
+    if (p.id == null) return;
+    
+    final body = {
+      'quantity': p.quantity,
+      'price': p.price,
+      'unit': p.unit,
+      'frequency': _freqToServer(p.frequency),
+      'alternate_day_start': p.alternateDayStart != null ? _altToServer(p.alternateDayStart!) : null,
+      'weekly_day': p.weeklyDay != null ? _weekToServer(p.weeklyDay!) : null,
+      'monthly_date': p.monthlyDate,
+      'custom_week_days': p.customWeekDays?.map(_weekToServer).toList(),
+    };
+    final res = await http.put(
+      Uri.parse('$baseUrl/api/customer-products/${p.id}'),
+      headers: await _headers(),
+      body: jsonEncode(body),
+    );
+    if (res.statusCode != 200) throw Exception(_err(res));
+  }
+
+  Future<void> deleteCustomerProduct(String id) async {
+    final res = await http.delete(
+      Uri.parse('$baseUrl/api/customer-products/$id'),
+      headers: await _headers(),
+    );
+    if (res.statusCode != 200) throw Exception(_err(res));
   }
 
   Future<void> deleteCustomer(String id) async {
@@ -133,8 +194,10 @@ class CustomerService {
     final pid = m['product_id'] is int ? (m['product_id'] as int).toString() : m['product_id'].toString();
     final unit = (m['unit'] as String?) ?? (prod?['product_unit'] as String? ?? '');
     final priceRaw = m['price'] ?? prod?['product_price'] ?? 0;
+    final cpId = m['id'] is int ? (m['id'] as int).toString() : (m['id'] as String?);
 
     return CustomerProduct(
+      id: cpId,
       productId: pid,
       productName: (prod?['product_name'] as String?) ?? '',
       quantity: m['quantity'] as int,

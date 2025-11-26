@@ -4,16 +4,31 @@ import 'package:daily_drop/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../provider/customerProvider.dart';
+import '../provider/paymentsProvider.dart';
 import '../controller/customer_controller.dart';
 import '../widgets/customer_card.dart';
-import 'Dashboard.dart';
 
-class CustomersScreen extends ConsumerWidget {
+class CustomersScreen extends ConsumerStatefulWidget {
   const CustomersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CustomersScreen> createState() => _CustomersScreenState();
+}
+
+class _CustomersScreenState extends ConsumerState<CustomersScreen> {
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final customersAsync = ref.watch(customersProvider);
+    final pendingByCustomerAsync = ref.watch(pendingByCustomerProvider);
     final controller = CustomerController(ref);
 
     return Scaffold(
@@ -70,26 +85,61 @@ class CustomersScreen extends ConsumerWidget {
                   data: (customers) => Text(
                     '${customers.length} Total Customers',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 16,
                     ),
                   ),
                   loading: () => Text(
                     'Loading...',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 16,
                     ),
                   ),
                   error: (_, __) => Text(
                     'Error loading customers',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 16,
                     ),
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase();
+                });
+              },
+              decoration: InputDecoration(
+                hintText: 'Search customers...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
             ),
           ),
 
@@ -128,22 +178,86 @@ class CustomersScreen extends ConsumerWidget {
                   );
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.only(top: 16, bottom: 16),
-                  itemCount: customers.length,
-                  itemBuilder: (context, index) {
-                    final customer = customers[index];
-                    return CustomerCard(
-                      customer: customer,
-                      onTap: () {
-                        controller.showEditCustomerDialog(context, customer);
+                // Filter and sort customers
+                var filteredCustomers = customers.where((customer) {
+                  return customer.name.toLowerCase().contains(_searchQuery) ||
+                      customer.address.toLowerCase().contains(_searchQuery) ||
+                      customer.phone.contains(_searchQuery);
+                }).toList();
+
+                // Sort alphabetically by name
+                filteredCustomers.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+                if (filteredCustomers.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 64,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No customers found',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return pendingByCustomerAsync.when(
+                  data: (pendingMap) {
+                    return ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      itemCount: filteredCustomers.length,
+                      itemBuilder: (context, index) {
+                        final customer = filteredCustomers[index];
+                        final pendingAmount = pendingMap[customer.id] ?? 0.0;
+                        return CustomerCard(
+                          customer: customer.copyWith(pendingAmount: pendingAmount),
+                          onTap: () {
+                            controller.showEditCustomerDialog(context, customer);
+                          },
+                        );
                       },
                     );
                   },
+                  loading: () => ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    itemCount: filteredCustomers.length,
+                    itemBuilder: (context, index) {
+                      final customer = filteredCustomers[index];
+                      return CustomerCard(
+                        customer: customer,
+                        onTap: () {
+                          controller.showEditCustomerDialog(context, customer);
+                        },
+                      );
+                    },
+                  ),
+                  error: (_, __) => ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    itemCount: filteredCustomers.length,
+                    itemBuilder: (context, index) {
+                      final customer = filteredCustomers[index];
+                      return CustomerCard(
+                        customer: customer,
+                        onTap: () {
+                          controller.showEditCustomerDialog(context, customer);
+                        },
+                      );
+                    },
+                  ),
                 );
               },
               loading: () => const Center(
-                child: const LoadingOverlay(),
+                child: LoadingOverlay(),
               ),
               error: (error, stack) => Center(
                 child: Column(

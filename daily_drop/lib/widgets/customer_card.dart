@@ -31,14 +31,16 @@ class CustomerCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Customer Name
-                  Text(
+            // Customer Name and Pending Amount Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
                     customer.name,
                     style: const TextStyle(
                       fontSize: 18,
@@ -46,51 +48,69 @@ class CustomerCard extends StatelessWidget {
                       color: Colors.black87,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  
-                  // Address
-                  Row(
-                    children: [
-                      Icon(Icons.location_on_outlined, size: 14, color: Colors.grey.shade600),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          customer.address,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '₹${customer.pendingAmount.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: customer.pendingAmount > 0 
+                        ? Colors.orange.shade700 
+                        : Colors.green.shade700,
                   ),
-                  
-                  // Phone
-                  if (customer.phone.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.phone_outlined, size: 14, color: Colors.grey.shade600),
-                        const SizedBox(width: 4),
-                        Text(
-                          customer.phone,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            
+            // Address
+            Row(
+              children: [
+                Icon(Icons.location_on_outlined, size: 14, color: Colors.grey.shade600),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    customer.address,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
                     ),
-                  ],
-                  
-                  const SizedBox(height: 12),
-                  const Divider(height: 1),
-                  const SizedBox(height: 12),
-                  
-                  // Daily Products
-                  Row(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            
+            // Phone
+            if (customer.phone.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.phone_outlined, size: 14, color: Colors.grey.shade600),
+                  const SizedBox(width: 4),
+                  Text(
+                    customer.phone,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            
+            // Daily Products
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Daily Products',
@@ -100,60 +120,21 @@ class CustomerCard extends StatelessWidget {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    customer.getDailyProductsSummary(),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 12),
-                  
-                  // Pending Amount
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: customer.pendingAmount > 0 
-                              ? Colors.orange.shade50 
-                              : Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          customer.pendingAmount > 0 ? 'Pending' : 'Paid',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: customer.pendingAmount > 0 
-                                ? Colors.orange.shade700 
-                                : Colors.green.shade700,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 4),
                       Text(
-                        '₹${customer.pendingAmount.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: customer.pendingAmount > 0 
-                              ? Colors.orange.shade700 
-                              : Colors.green.shade700,
+                        customer.getDailyProductsSummary(),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 28),
+              ],
             ),
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 28),
           ],
         ),
       ),
