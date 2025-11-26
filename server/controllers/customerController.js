@@ -28,7 +28,12 @@ exports.create = async (req, res) => {
 // Get all customers for the logged-in user
 exports.findAll = async (req, res) => {
   try {
-    const customers = await Customer.findAll({ where: { user_id: req.userId } });
+    const customers = await Customer.findAll({ 
+      where: { 
+        user_id: req.userId,
+        is_active: true 
+      } 
+    });
     res.send(customers);
   } catch (err) {
     res.status(500).send({ message: err.message });
@@ -73,7 +78,7 @@ exports.update = async (req, res) => {
   }
 };
 
-// Delete customer (owner or admin)
+// Delete customer (owner or admin) - Soft delete by marking as inactive
 exports.delete = async (req, res) => {
   try {
     const user = await User.findByPk(req.userId);
@@ -84,7 +89,8 @@ exports.delete = async (req, res) => {
       return res.status(403).send({ message: 'Forbidden' });
     }
 
-    await customer.destroy();
+    // Soft delete: mark as inactive instead of destroying
+    await customer.update({ is_active: false });
     res.send({ message: 'Customer deleted successfully' });
   } catch (err) {
     res.status(500).send({ message: err.message });
@@ -102,7 +108,12 @@ exports.findByUserId = async (req, res) => {
       return res.status(403).send({ message: 'Forbidden' });
     }
 
-    const customers = await Customer.findAll({ where: { user_id: targetUserId } });
+    const customers = await Customer.findAll({ 
+      where: { 
+        user_id: targetUserId,
+        is_active: true 
+      } 
+    });
     res.send(customers);
   } catch (err) {
     res.status(500).send({ message: err.message });

@@ -1057,9 +1057,23 @@ if (frequency == DeliveryFrequency.monthly) ...[
                   isEditMode ? 'Edit Customer' : 'Add Customer',
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
+                Row(
+                  children: [
+                    if (isEditMode)
+                      IconButton(
+                        onPressed: () {
+                          final controller = CustomerController(ref);
+                          controller.deleteCustomer(widget.customer!.id, context);
+                          // Navigator.pop(context);
+                        },
+                        
+                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
                 ),
               ],
             ),

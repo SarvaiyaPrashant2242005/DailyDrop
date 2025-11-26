@@ -71,18 +71,54 @@ class CustomerController {
   }
 
   Future<void> deleteCustomer(String id, BuildContext context) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Customer'),
+        content: const Text(
+          'Are you sure you want to delete this customer? All customer data including orders and payment history will be permanently removed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+         TextButton(
+  // When Delete is pressed → close dialog & return true
+  onPressed: () {
+    Navigator.pop(dialogContext, true); // Return "true" to parent
+  },
+
+  // Button text color
+  style: TextButton.styleFrom(
+    foregroundColor: Colors.red,
+  ),
+
+  child: const Text('Delete'),
+),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     try {
       await ref.read(customersProvider.notifier).deleteCustomer(id);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Customer deleted successfully')),
+        Navigator.pop(context); // Close the edit dialog
+        showTopSnackBar(
+          context,
+          'Customer deleted successfully',
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting customer: $e')),
+        showTopSnackBar(
+          context,
+          'Error deleting customer: $e',
+          isError: true,
         );
       }
     }
