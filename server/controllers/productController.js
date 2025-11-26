@@ -4,6 +4,8 @@ const Product = db.products;
 const User = db.users;
 const Customer = db.customers;
 const v = require('../utils/validator');
+const fs = require('fs');
+const path = require('path');
 
 // Create product
 exports.create = async (req, res) => {
@@ -11,17 +13,34 @@ exports.create = async (req, res) => {
     const ownerId = req.userId;
     const { product_name, product_price, product_unit } = req.body;
     const check = v.validateProductCreate(req.body);
-    if (!check.ok) return res.status(400).send({ message: 'Validation error', errors: check.errors });
+    if (!check.ok) {
+      // Delete uploaded file if validation fails
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
+      return res.status(400).send({ message: 'Validation error', errors: check.errors });
+    }
 
-    const product = await Product.create({
+    const productData = {
       product_name,
       product_price,
       product_unit,
       user_id: ownerId,
-    });
+    };
+
+    // Add image URL if file was uploaded
+    if (req.file) {
+      productData.image_url = `/uploads/products/${req.file.filename}`;
+    }
+
+    const product = await Product.create(productData);
 
     res.status(201).send(product);
   } catch (err) {
+    // Delete uploaded file if product creation fails
+    if (req.file) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).send({ message: err.message });
   }
 };
@@ -58,18 +77,53 @@ exports.update = async (req, res) => {
   try {
     const user = await User.findByPk(req.userId);
     const product = await Product.findByPk(req.params.id);
-    if (!product) return res.status(404).send({ message: 'Product not found' });
+    if (!product) {
+      // Delete uploaded file if product not found
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
+      return res.status(404).send({ message: 'Product not found' });
+    }
 
     if (user.role !== 'admin' && product.user_id !== req.userId) {
+      // Delete uploaded file if forbidden
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
       return res.status(403).send({ message: 'Forbidden' });
     }
 
     const check = v.validateProductUpdate(req.body);
-    if (!check.ok) return res.status(400).send({ message: 'Validation error', errors: check.errors });
+    if (!check.ok) {
+      // Delete uploaded file if validation fails
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
+      return res.status(400).send({ message: 'Validation error', errors: check.errors });
+    }
+
     const { product_name, product_price, product_unit } = req.body;
-    await product.update({ product_name, product_price, product_unit });
-    res.send({ message: 'Product updated successfully' });
+    const updateData = { product_name, product_price, product_unit };
+
+    // Handle image update
+    if (req.file) {
+      // Delete old image if exists
+      if (product.image_url) {
+        const oldImagePath = path.join(__dirname, '..', product.image_url);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+      updateData.image_url = `/uploads/products/${req.file.filename}`;
+    }
+
+    await product.update(updateData);
+    res.send({ message: 'Product updated successfully', product });
   } catch (err) {
+    // Delete uploaded file if update fails
+    if (req.file) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).send({ message: err.message });
   }
 };
@@ -83,6 +137,14 @@ exports.delete = async (req, res) => {
 
     if (user.role !== 'admin' && product.user_id !== req.userId) {
       return res.status(403).send({ message: 'Forbidden' });
+    }
+
+    // Delete image file if exists
+    if (product.image_url) {
+      const imagePath = path.join(__dirname, '..', product.image_url);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
     }
 
     await product.destroy();
