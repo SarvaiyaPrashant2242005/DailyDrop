@@ -1,7 +1,6 @@
 import 'package:daily_drop/provider/paymentsProvider.dart';
 import 'package:daily_drop/screens/CustomersScreen.dart';
 import 'package:daily_drop/screens/OrdersScreen.dart';
-import 'package:daily_drop/screens/PaymentDetailScreen.dart';
 import 'package:daily_drop/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -76,7 +75,16 @@ class DashboardHome extends ConsumerWidget {
       case DeliveryFrequency.everyday:
         return true;
       case DeliveryFrequency.oneDayOnOneDayOff:
-        return p.alternateDayStart == AlternateDayStart.today;
+        // For alternate days, we need to check if today is an odd or even day
+        // If alternateDayStart is 'today', deliver on odd days (1, 3, 5, etc.)
+        // If alternateDayStart is 'tomorrow', deliver on even days (2, 4, 6, etc.)
+        final dayOfYear = today.difference(DateTime(today.year, 1, 1)).inDays + 1;
+        final isOddDay = dayOfYear % 2 == 1;
+        if (p.alternateDayStart == AlternateDayStart.today) {
+          return isOddDay;
+        } else {
+          return !isOddDay;
+        }
       case DeliveryFrequency.weekly:
         if (p.weeklyDay == null) return false;
         final weekdayMap = {
@@ -90,10 +98,20 @@ class DashboardHome extends ConsumerWidget {
         };
         return weekdayMap[p.weeklyDay] == today.weekday;
       case DeliveryFrequency.monthly:
-        return false;
+        if (p.monthlyDate == null) return false;
+        return today.day == p.monthlyDate;
       case DeliveryFrequency.custom:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        if (p.customWeekDays == null || p.customWeekDays!.isEmpty) return false;
+        final weekdayMap = {
+          WeekDay.monday: DateTime.monday,
+          WeekDay.tuesday: DateTime.tuesday,
+          WeekDay.wednesday: DateTime.wednesday,
+          WeekDay.thursday: DateTime.thursday,
+          WeekDay.friday: DateTime.friday,
+          WeekDay.saturday: DateTime.saturday,
+          WeekDay.sunday: DateTime.sunday,
+        };
+        return p.customWeekDays!.any((day) => weekdayMap[day] == today.weekday);
     }
   }
 
@@ -432,7 +450,7 @@ class DashboardHome extends ConsumerWidget {
                         }).toList(),
                       );
                     },
-                    loading: () => const Center(child: const LoadingOverlay()),
+                    loading: () => const Center(child: LoadingOverlay()),
                     error: (e, _) => Text('Error: $e'),
                   ),
                 );
