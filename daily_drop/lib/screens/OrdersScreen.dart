@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../model/customer_model.dart';
+import '../model/Product_model.dart';
 import '../provider/customerProvider.dart';
 import '../provider/paymentsProvider.dart';
+import '../provider/productProvider.dart';
 
 
 class OrdersScreen extends ConsumerStatefulWidget {
@@ -79,6 +81,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   @override
   Widget build(BuildContext context) {
     final customersAsync = ref.watch(customersProvider);
+    final productsAsync = ref.watch(productsProvider);
     final today = DateTime.now();
     final titleDate = DateFormat('EEEE, d MMMM').format(today);
 
@@ -225,9 +228,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
                     final latestToday = deliveriesAsync.maybeWhen(
                       data: (list) {
-                        final todayList = list.where((d) =>
+                        final todayList = list.where((d) => 
                             d.customerId == item.customer.id &&
-                            d.date.year == today.year &&
+                            d.date.year == today.year && 
                             d.date.month == today.month &&
                             d.date.day == today.day);
                         if (todayList.isEmpty) return null;
@@ -239,12 +242,19 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                     // Undo is always available for completed deliveries
                     final bool canUndo = latestToday != null;
 
+                    // Get products map for image lookup
+                    final productsMap = productsAsync.maybeWhen(
+                      data: (products) => {for (var p in products) p.id: p},
+                      orElse: () => <String, Product>{},
+                    );
+
                     // Use expandable card for pending deliveries
                     if (_tabIndex == 0) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _ExpandableDeliveryCard(
                           item: item,
+                          productsMap: productsMap,
                           getQty: _getQty,
                           setQty: _setQty,
                           onComplete: () async {
@@ -270,6 +280,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _CompletedExpandableCard(
                         item: item,
+                        productsMap: productsMap,
                         getQty: _getQty,
                         canUndo: canUndo,
                         onUndo: canUndo
@@ -300,12 +311,14 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 // Expandable Card for Pending Deliveries
 class _ExpandableDeliveryCard extends StatefulWidget {
   final _CustomerDelivery item;
+  final Map<String, Product> productsMap;
   final int Function(String, String, int) getQty;
   final void Function(String, String, int) setQty;
   final VoidCallback onComplete;
 
   const _ExpandableDeliveryCard({
     required this.item,
+    required this.productsMap,
     required this.getQty,
     required this.setQty,
     required this.onComplete,
@@ -417,11 +430,60 @@ class _ExpandableDeliveryCardState extends State<_ExpandableDeliveryCard> {
                         itemBuilder: (context, index) {
                           final p = widget.item.products[index];
                           final qty = widget.getQty(widget.item.customer.id, p.productId, p.quantity);
+                          final product = widget.productsMap[p.productId];
                           
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: Row(
                               children: [
+                                // Product image
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  margin: const EdgeInsets.only(right: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: (product?.imageUrl != null && product!.imageUrl!.isNotEmpty)
+                                        ? Image.network(
+                                            product.imageUrl!,
+                                            width: 48,
+                                            height: 48,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return Icon(
+                                                Icons.inventory_2_outlined,
+                                                color: Colors.grey.shade400,
+                                                size: 24,
+                                              );
+                                            },
+                                            loadingBuilder: (context, child, loadingProgress) {
+                                              if (loadingProgress == null) return child;
+                                              return Center(
+                                                child: SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    value: loadingProgress.expectedTotalBytes != null
+                                                        ? loadingProgress.cumulativeBytesLoaded /
+                                                            loadingProgress.expectedTotalBytes!
+                                                        : null,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          )
+                                        : Icon(
+                                            Icons.inventory_2_outlined,
+                                            color: Colors.grey.shade400,
+                                            size: 24,
+                                          ),
+                                  ),
+                                ),
                                 // Quantity controls
                                 Container(
                                   height: 32,
@@ -582,12 +644,14 @@ class _ExpandableDeliveryCardState extends State<_ExpandableDeliveryCard> {
 // Expandable Completed Delivery Card
 class _CompletedExpandableCard extends StatefulWidget {
   final _CustomerDelivery item;
+  final Map<String, Product> productsMap;
   final int Function(String, String, int) getQty;
   final bool canUndo;
   final Future<void> Function()? onUndo;
 
   const _CompletedExpandableCard({
     required this.item,
+    required this.productsMap,
     required this.getQty,
     required this.canUndo,
     this.onUndo,
@@ -703,11 +767,60 @@ class _CompletedExpandableCardState extends State<_CompletedExpandableCard> {
                     itemBuilder: (context, index) {
                       final p = widget.item.products[index];
                       final qty = widget.getQty(widget.item.customer.id, p.productId, p.quantity);
+                      final product = widget.productsMap[p.productId];
                       
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: Row(
                           children: [
+                            // Product image
+                            Container(
+                              width: 48,
+                              height: 48,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: (product?.imageUrl != null && product!.imageUrl!.isNotEmpty)
+                                    ? Image.network(
+                                        product.imageUrl!,
+                                        width: 48,
+                                        height: 48,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Icon(
+                                            Icons.inventory_2_outlined,
+                                            color: Colors.grey.shade400,
+                                            size: 24,
+                                          );
+                                        },
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return Center(
+                                            child: SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                value: loadingProgress.expectedTotalBytes != null
+                                                    ? loadingProgress.cumulativeBytesLoaded /
+                                                        loadingProgress.expectedTotalBytes!
+                                                    : null,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      )
+                                    : Icon(
+                                        Icons.inventory_2_outlined,
+                                        color: Colors.grey.shade400,
+                                        size: 24,
+                                      ),
+                              ),
+                            ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
