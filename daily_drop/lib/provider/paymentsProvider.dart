@@ -44,11 +44,25 @@ class DeliveriesNotifier extends StateNotifier<AsyncValue<List<Delivery>>> {
   }
 }
 
-// Recent deliveries (for dashboard)
+// Recent deliveries (for dashboard) - only today's deliveries
 final recentDeliveriesProvider = Provider<AsyncValue<List<Delivery>>>((ref) {
   final deliveriesAsync = ref.watch(deliveriesProvider);
   return deliveriesAsync.whenData((deliveries) {
-    return deliveries.take(5).toList();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    // Filter deliveries to only include today's deliveries
+    final todayDeliveries = deliveries.where((delivery) {
+      final deliveryDate = DateTime(
+        delivery.date.year,
+        delivery.date.month,
+        delivery.date.day,
+      );
+      return deliveryDate.isAtSameMomentAs(today);
+    }).toList();
+    
+    // Return up to 5 most recent deliveries from today
+    return todayDeliveries.take(5).toList();
   });
 });
 
@@ -155,6 +169,41 @@ final totalNetBalanceProvider = FutureProvider<double>((ref) async {
 final totalPendingProvider = FutureProvider<double>((ref) async {
   final service = ref.watch(paymentsServiceProvider);
   return await service.computeTotalPending();
+});
+
+// Total advance across all customers (only negative balances)
+final totalAdvanceProvider = FutureProvider<double>((ref) async {
+  final service = ref.watch(paymentsServiceProvider);
+  final customersAsync = ref.watch(customersProvider);
+  
+  final customers = await customersAsync.when(
+    data: (data) => Future.value(data),
+    loading: () => Future.value([]),
+    error: (_, __) => Future.value([]),
+  );
+  
+  double totalAdvance = 0;
+  
+  for (final customer in customers) {
+    try {
+      final deliveries = await service.getDeliveriesByCustomer(customer.id);
+      final payments = await service.getPaymentsByCustomer(customer.id);
+      
+      double totalDebit = deliveries.fold(0.0, (sum, d) => sum + d.total);
+      double totalCredit = payments.fold(0.0, (sum, p) => sum + p.amount);
+      
+      double netBalance = totalDebit - totalCredit;
+      
+      // Only sum negative balances (advances)
+      if (netBalance < 0) {
+        totalAdvance += netBalance;
+      }
+    } catch (e) {
+      print('Error calculating advance for ${customer.name}: $e');
+    }
+  }
+  
+  return totalAdvance;
 });
 
 // Pending by customerId (UPDATED - now returns net balance including negatives)

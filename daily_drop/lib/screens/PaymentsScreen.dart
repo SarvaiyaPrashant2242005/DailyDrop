@@ -19,154 +19,226 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Refresh all payment-related data on screen initialization
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(deliveriesProvider);
+      ref.invalidate(paymentRecordsProvider);
+      ref.invalidate(totalPendingProvider);
+      ref.invalidate(totalAdvanceProvider);
+      ref.invalidate(totalNetBalanceProvider);
+      ref.invalidate(pendingByCustomerProvider);
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
+  Future<void> _refreshPayments() async {
+    // Invalidate all payment-related providers to trigger refresh
+    ref.invalidate(deliveriesProvider);
+    ref.invalidate(paymentRecordsProvider);
+    ref.invalidate(totalPendingProvider);
+    ref.invalidate(totalAdvanceProvider);
+    ref.invalidate(totalNetBalanceProvider);
+    ref.invalidate(pendingByCustomerProvider);
+    ref.invalidate(customersProvider);
+    
+    // Wait for the FutureProviders to reload
+    await Future.wait([
+      ref.read(totalPendingProvider.future),
+      ref.read(totalAdvanceProvider.future),
+      ref.read(totalNetBalanceProvider.future),
+      ref.read(pendingByCustomerProvider.future),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final totalPendingAsync = ref.watch(totalPendingProvider);
+    final totalAdvanceAsync = ref.watch(totalAdvanceProvider);
     final customersAsync = ref.watch(customersProvider);
     final pendingMapAsync = ref.watch(pendingByCustomerProvider);
     final netBalanceAsync = ref.watch(totalNetBalanceProvider);
 
     return Scaffold(
-      body: Column(
-        children: [
-          // Full-width header with gradient
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 30),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF4C8CFF), Color(0xFF8B5CF6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+      body: RefreshIndicator(
+        onRefresh: _refreshPayments,
+        child: CustomScrollView(
+          slivers: [
+            // Full-width header with gradient
+            SliverToBoxAdapter(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 30),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF4C8CFF), Color(0xFF8B5CF6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Payments',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Track pending payments',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30),
+            ),
+            
+            // Sticky Balance Card
+            SliverToBoxAdapter(
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Total Pending
+                    totalPendingAsync.when(
+                      data: (total) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Total Pending',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '₹${total.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFFF6B35),
+                            ),
+                          ),
+                        ],
+                      ),
+                      loading: () => const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      error: (e, _) => Text('Error: $e', style: const TextStyle(fontSize: 12)),
+                    ),
+                    
+                    // Total Advance (Middle)
+                    totalAdvanceAsync.when(
+                      data: (advance) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Total Advance',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '₹${advance.abs().toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF10B981),
+                            ),
+                          ),
+                        ],
+                      ),
+                      loading: () => const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      error: (e, _) => Text('Error: $e', style: const TextStyle(fontSize: 12)),
+                    ),
+                    
+                    // Net Balance (Right side)
+                    netBalanceAsync.when(
+                      data: (netTotal) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'Net Balance',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '₹${netTotal.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: netTotal > 0 
+                                  ? const Color(0xFFFF6B35) 
+                                  : netTotal < 0 
+                                      ? const Color(0xFF10B981)
+                                      : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      loading: () => const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      error: (e, _) => Text('Error: $e', style: const TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
               ),
             ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Payments',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Track pending payments',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Sticky Balance Card
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Total Pending
-                totalPendingAsync.when(
-                  data: (total) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Total Pending',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '₹${total.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFFF6B35),
-                        ),
-                      ),
-                    ],
-                  ),
-                  loading: () => const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  error: (e, _) => Text('Error: $e', style: const TextStyle(fontSize: 12)),
-                ),
-                
-                // Net Balance (Right side)
-                netBalanceAsync.when(
-                  data: (netTotal) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'Net Balance',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '₹${netTotal.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: netTotal > 0 
-                              ? const Color(0xFFFF6B35) 
-                              : netTotal < 0 
-                                  ? const Color(0xFF10B981)
-                                  : Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  loading: () => const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  error: (e, _) => Text('Error: $e', style: const TextStyle(fontSize: 12)),
-                ),
-              ],
-            ),
-          ),
-          
-          // Scrollable Content
-          Expanded(
-            child: ListView(
+            
+            // Scrollable Content
+            SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
                 // Search Bar
                 TextField(
                   controller: _searchController,
@@ -283,11 +355,12 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                   loading: () => const Center(child: LoadingOverlay()),
                   error: (e, _) => Text('Error: $e'),
                 ),
-              ],
+              ]),
             ),
           ),
         ],
       ),
+    ),
     );
   }
 }
